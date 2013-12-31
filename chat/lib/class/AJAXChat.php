@@ -232,16 +232,8 @@ class AJAXChat {
 			$time += $this->getConfig('timeZoneOffset');
 		}
 		// Check the opening hours:
-		if($this->getConfig('openingHour') < $this->getConfig('closingHour'))
-		{
-			if(($this->getConfig('openingHour') > date('G', $time)) || ($this->getConfig('closingHour') <= date('G', $time)))
-				return false;
-		}
-		else
-		{
-			if(($this->getConfig('openingHour') > date('G', $time)) && ($this->getConfig('closingHour') <= date('G', $time)))
-				return false;
-		}
+		if(($this->getConfig('openingHour') > date('G', $time)) || ($this->getConfig('closingHour') <= date('G', $time)))
+			return false;
 		// Check the opening weekdays:
 		if(!in_array(date('w', $time), $this->getConfig('openingWeekDays')))
 			return false;
@@ -666,6 +658,42 @@ class AJAXChat {
 	}
 	
 	function insertParsedMessage($text) {
+  
+          // First, translate AE Coordinates
+        $ae_servers = array(
+        'A' => 'alpha',
+        'B' => 'beta',
+        'C' => 'ceti',
+        'D' => 'delta',
+        'E' => 'epsilon',
+        'F' => 'fenix',
+        'G' => 'gamma',
+        'H' => 'helion',
+        'I' => 'ixion',
+        'J' => 'juno',
+        'K' => 'kappa',
+        'L' => 'lyra',
+        );
+
+        foreach($ae_servers as $letter => $name) {
+        $re1='('.$letter.')';	# Any Single Character 1
+        $re2='(\\d)';	# Any Single Digit 1
+        $re3='(\\d)';	# Any Single Digit 2
+        $re4='(:)';	# Any Single Character 2
+        $re5='(\\d)';	# Any Single Digit 3
+        $re6='(\\d)';	# Any Single Digit 4
+        $re7='(:)';	# Any Single Character 3
+        $re8='(\\d)';	# Any Single Digit 5
+        $re9='(\\d)';	# Any Single Digit 6
+        $re10='(:)';	# Any Single Character 4
+        $re11='(\\d)';	# Any Single Digit 7
+        $re12='(\\d)';	# Any Single Digit 8
+
+        $pattern = "/".$re1.$re2.$re3.$re4.$re5.$re6.$re7.$re8.$re9.$re10.$re11.$re12."/is";
+        $string = $text;
+        $replacement = '[url=http://'.$name.'.astroempires.com/map.aspx?loc='.$letter.'${2}${3}:${5}${6}:${8}${9}:${11}${12}]'.$letter.'${2}${3}:${5}${6}:${8}${9}:${11}${12}[/url]';
+        $text = preg_replace($pattern, $replacement, $string);
+        }
 
 		// If a queryUserName is set, sent all messages as private messages to this userName:
 		if($this->getQueryUserName() !== null && strpos($text, '/') !== 0) {
@@ -1221,6 +1249,13 @@ class AJAXChat {
 			}
 		}
 	}
+  
+  function prettyGeoIPInfo($array) {
+    $country = $array['country_name'];
+    $region = geoip_region_name_by_code($array['country_code'], $array['region']);
+    $city = $array['city'];
+    return $city.", ".$region.", ".$country;
+  }
 			
 	function insertParsedMessageWhois($textParts) {
 		// Only moderators/admins:
@@ -1240,10 +1275,12 @@ class AJAXChat {
 					);
 				} else {
 					// List user information:
-					$this->insertChatBotMessage(
-						$this->getPrivateMessageID(),
-						'/whois '.$textParts[1].' '.$this->getIPFromID($whoisUserID)
-					);
+          $ip = $this->getIPFromID($whoisUserID);
+          $geoip = @geoip_record_by_name($ip);
+          $this->insertChatBotMessage(
+            $this->getPrivateMessageID(),
+            '[i]User '.$textParts[1].' - IP address: '.$ip.' ('.$this->prettyGeoIPInfo($geoip).' - [url=http://ipduh.com/apropos/?'.$ip.']IPDuh[/url])[/i]'
+          );
 				}
 			}
 		} else {
@@ -1970,6 +2007,7 @@ class AJAXChat {
 			$xml .= ' userID="'.$onlineUserData['userID'].'"';
 			$xml .= ' userRole="'.$onlineUserData['userRole'].'"';
 			$xml .= ' channelID="'.$onlineUserData['channel'].'"';
+      $xml .= ' isAway="'.$onlineUserData['isAway'].'"';
 			$xml .= '>';
 			$xml .= '<![CDATA['.$this->encodeSpecialChars($onlineUserData['userName']).']]>';
 			$xml .= '</user>';
@@ -2385,7 +2423,8 @@ class AJAXChat {
 						userRole,
 						channel,
 						UNIX_TIMESTAMP(dateTime) AS timeStamp,
-						ip
+						ip,
+            isAway
 					FROM
 						'.$this->getDataBaseTable('online').'
 					ORDER BY

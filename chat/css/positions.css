@@ -54,7 +54,7 @@
 #content #headlineContainer {
 	position:absolute;
 	left:20px;
-	top:5px;
+	top:15px;
 }
 #content #logoutChannelContainer {
 	position:absolute;
@@ -64,7 +64,7 @@
 #content #statusIconContainer {
 	position:absolute;
 	right:20px;
-	top:50px;
+	bottom:20px;
 	width: 22px;
 	height: 22px;
 }
@@ -72,65 +72,74 @@
 	position:absolute;
 	left:20px;
 	right:230px;
-	top:85px;
-	bottom:150px;
+	top:50px;
+	bottom:115px;
 	overflow:auto;
+  hyphens: auto;
 }
 #content #inputFieldContainer {
-	position:absolute;
-	left:20px;
-	right:20px;
-	bottom:95px;
-	padding-right:4px;
+  bottom: 55px;
+  left: 20px;
+  padding-right: 4px;
+  position: absolute;
+  right: 20px;
 }
 #content #submitButtonContainer {
-	position:absolute;
-	right:20px;
-	bottom:60px;
+  bottom: 58px;
+  font-size: 20px;
+  opacity: 0.5;
+  position: absolute;
+  right: 26px;
+  z-index: 0;
 }
 #content #onlineListContainer {
-	position:absolute;
-	right:20px;
-	top:85px;
-	width:200px;
-	bottom:150px;
+  bottom: 115px;
+  position: absolute;
+  right: 20px;
+  top: 50px;
+  width: 200px;
+  hyphens: auto;
+}
+#content #poniconContainer {
+  bottom: 115px;
+  position: absolute;
+  right: 20px;
+  top: 50px;
+  width: 200px;
 }
 #content #helpContainer {
 	position:absolute;
 	right:20px;
-	top:85px;
+	top:50px;
 	width:360px;
-	bottom:150px;
+	bottom:115px;
 }
 #content #settingsContainer {
 	position:absolute;
 	right:20px;
-	top:85px;
+	top:50px;
 	width:360px;
-	bottom:150px;
+	bottom:115px;
 }
 #content #bbCodeContainer {
-	position:absolute;
-	left:20px;
-	bottom:20px;
-	padding:3px;
+  bottom: 19px;
+  left: 20px;
+  padding: 3px;
+  position: absolute;
 }
 #content #colorCodesContainer {
-	position:absolute;
-	left:20px;
-	bottom:55px;
-	padding:3px;
-	z-index:1;
+  bottom: 48px;
+  left: 20px;
+  padding: 3px;
+  position: absolute;
+  z-index: 1;
 }
 #content #emoticonsContainer {
-	position:absolute;
-	left:20px;
-	bottom:57px;
-	padding:3px;
+  padding: 3px;
 }
 #content #optionsContainer {
 	position:absolute;
-	right:20px;
+	right:45px;
 	bottom:20px;
 	padding:3px;
 	padding-right:0px;
@@ -161,6 +170,7 @@
 	margin-bottom:2px;
 }
 #content #headlineContainer h1 {
+  display:inline;
 	margin-left:auto;
 	margin-top:12px;
 }
@@ -191,10 +201,11 @@
 	padding-left:5px;
 }
 #content #inputFieldContainer #inputField {
+  resize: none;
 	width:100%;
-	height:40px;
+	height:48px;
 }
-#content #onlineListContainer h3, #content #helpContainer h3, #content #settingsContainer h3 {
+#content #onlineListContainer h3, #content #helpContainer h3, #content #settingsContainer h3, #content #poniconContainer h3 {
 	height:30px;
 	padding-left:10px;
 	padding-top:4px;
@@ -203,7 +214,7 @@
 	margin:0px;
 	text-align:center;
 }
-#content #onlineListContainer #onlineList, #content #helpContainer #helpList, #content #settingsContainer #settingsList {
+#content #onlineListContainer #onlineList, #content #helpContainer #helpList, #content #settingsContainer #settingsList, #content #poniconContainer #poniconList {
 	position:absolute;
 	left:0px;
 	right:0px;
@@ -211,7 +222,7 @@
 	bottom:0px;
 	overflow:auto;
 }
-#content #onlineListContainer #onlineList div {
+#content #onlineListContainer #onlineList div, #content #poniconContainer #poniconList span {
 	padding-left:10px;
 	padding-top:2px;
 	padding-right:10px;
@@ -250,4 +261,7 @@
 	height:22px;
 	vertical-align:middle;
 	margin-bottom:2px;
+}
+#content #optionsContainer #logoutButton {
+  background:url('../img/logout.png') no-repeat;
 }

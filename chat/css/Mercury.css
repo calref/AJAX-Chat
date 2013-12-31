@@ -59,7 +59,7 @@
 		background-color:#383838;
 		color:#D4D4D4;
 	}
-	#content #chatList, #content #onlineListContainer, #content #helpContainer, #content #settingsContainer, #content #bbCodeContainer, #content #colorCodesContainer, #content #emoticonsContainer {
+	#content #chatList, #content #onlineListContainer, #content #helpContainer, #content #poniconContainer, #content #settingsContainer, #content #bbCodeContainer, #content #colorCodesContainer, #content #emoticonsContainer {
 		border-color:#565656;
 		background-color:#383838;
 	}
@@ -85,6 +85,9 @@
 	#content #optionsContainer #helpButton {
 	    background:url('../img/help.png') no-repeat;
 	}
+#content #optionsContainer #poniconButton {
+    background: url("../img/ponicons.png") no-repeat scroll 0 0 transparent;
+}
 	#content #optionsContainer #settingsButton {
 	    background:url('../img/settings.png') no-repeat;
 	}

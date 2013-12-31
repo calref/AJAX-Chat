@@ -197,7 +197,7 @@ class AJAXChatTemplate {
 		$styleSheets = '';
 		foreach($this->ajaxChat->getConfig('styleAvailable') as $style) {
 			$alternate = ($style == $this->ajaxChat->getConfig('styleDefault')) ? '' : 'alternate ';
-			$styleSheets .= '<link rel="'.$alternate.'stylesheet" type="text/css" href="css/'.rawurlencode($style).'.css" title="'.$this->ajaxChat->htmlEncode($style).'"/>';
+			$styleSheets .= '<link rel="'.$alternate.'stylesheet" type="text/css" href="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/css/'.rawurlencode($style).'.css" title="'.$this->ajaxChat->htmlEncode($style).'"/>';
 		}
 		return $styleSheets;
 	}

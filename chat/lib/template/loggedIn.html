@@ -12,17 +12,13 @@
 		}
 	</style>
 	[STYLE_SHEETS/]
-	<!--[if lt IE 7]>
-		<link rel="stylesheet" type="text/css" href="css/ie5-6.css"/>
-		<script type="text/javascript">
-			var isIElt7 = true;
-		</script>
-	<![endif]-->
 	<script src="js/chat.js" type="text/javascript" charset="UTF-8"></script>
 	<script src="js/custom.js" type="text/javascript" charset="UTF-8"></script>
 	<script src="js/lang/[LANG_CODE/].js" type="text/javascript" charset="UTF-8"></script>
 	<script src="js/config.js" type="text/javascript" charset="UTF-8"></script>
-	<script src="js/FABridge.js" type="text/javascript" charset="UTF-8"></script>
+	<script src="js/buzz.js" type="text/javascript" charset="UTF-8"></script>
+	<script src="js/moment.js" type="text/javascript" charset="UTF-8"></script>
+	<script src="js/konami.js" type="text/javascript" charset="UTF-8"></script>
 	<script type="text/javascript">
 		// <![CDATA[
 			function toggleContainer(containerID, hideContainerIDs) {
@@ -93,12 +89,9 @@
 			ajaxChatConfig.privateMessageDiff = parseInt('[PRIVATE_MESSAGE_DIFF/]');
 			ajaxChatConfig.showChannelMessages = parseInt('[SHOW_CHANNEL_MESSAGES/]');
 			ajaxChatConfig.messageTextMaxLength = parseInt('[MESSAGE_TEXT_MAX_LENGTH/]');
-			ajaxChatConfig.socketServerEnabled = parseInt('[SOCKET_SERVER_ENABLED/]');
-			ajaxChatConfig.socketServerHost = decodeURIComponent('[SOCKET_SERVER_HOST/]');
-			ajaxChatConfig.socketServerPort = parseInt('[SOCKET_SERVER_PORT/]');
-			ajaxChatConfig.socketServerChatID = parseInt('[SOCKET_SERVER_CHAT_ID/]');
 		
 			ajaxChat.init(ajaxChatConfig, ajaxChatLang, true, true, true, initialize);
+      var easter_egg = new Konami(function() { ajaxChat.konami(); });
 		// ]]>
 	</script>
 </head>
@@ -106,16 +99,10 @@
 <body>
 	<div id="content">
 		<div id="headlineContainer">
-			<h1>[LANG]title[/LANG]</h1>
-		</div>
-		<div id="logoutChannelContainer">
-  			<input type="button" id="logoutButton" value="[LANG]logout[/LANG]" onclick="ajaxChat.logout();"/>
-			<label for="channelSelection">[LANG]channel[/LANG]:</label>
+			<label for="channelSelection">[LANG]title[/LANG]:</label>
 			<select id="channelSelection" onchange="ajaxChat.switchChannel(this.options[this.selectedIndex].value);">[CHANNEL_OPTIONS/]</select>
 			<label for="styleSelection">[LANG]style[/LANG]:</label>
 			<select id="styleSelection" onchange="ajaxChat.setActiveStyleSheet(ajaxChat.getSelectedStyle());">[STYLE_OPTIONS/]</select>
-			<label for="languageSelection">[LANG]language[/LANG]:</label>
-			<select id="languageSelection" onchange="ajaxChat.switchLanguage(this.value);">[LANGUAGE_OPTIONS/]</select>
   		</div>
 		<div id="statusIconContainer" class="statusContainerOn" onclick="ajaxChat.updateChat(null);"></div>
 		<!--[if lt IE 7]>
@@ -126,10 +113,8 @@
 			<textarea id="inputField" rows="1" cols="50" title="[LANG]inputLineBreak[/LANG]" onkeypress="ajaxChat.handleInputFieldKeyPress(event);" onkeyup="ajaxChat.handleInputFieldKeyUp(event);"></textarea>
 		</div>
 		<div id="submitButtonContainer">
-			<span id="messageLengthCounter">0/[MESSAGE_TEXT_MAX_LENGTH/]</span>
-			<input type="button" id="submitButton" value="[LANG]messageSubmit[/LANG]" onclick="ajaxChat.sendMessage();"/>
-		</div>
-		<div id="emoticonsContainer" dir="ltr"></div>
+			<span id="messageLengthCounter">0</span>
+      </div>
 		<div id="bbCodeContainer">
 			<input type="button" value="[LANG]bbCodeLabelBold[/LANG]" title="[LANG]bbCodeTitleBold[/LANG]" onclick="ajaxChat.insertBBCode('b');" style="font-weight:bold;"/>
 			<input type="button" value="[LANG]bbCodeLabelItalic[/LANG]" title="[LANG]bbCodeTitleItalic[/LANG]" onclick="ajaxChat.insertBBCode('i');" style="font-style:italic;"/>
@@ -139,14 +124,17 @@
 			<input type="button" value="[LANG]bbCodeLabelURL[/LANG]" title="[LANG]bbCodeTitleURL[/LANG]" onclick="ajaxChat.insertBBCode('url');"/>
 			<input type="button" value="[LANG]bbCodeLabelImg[/LANG]" title="[LANG]bbCodeTitleImg[/LANG]" onclick="ajaxChat.insertBBCode('img');"/>
 			<input type="button" value="[LANG]bbCodeLabelColor[/LANG]" title="[LANG]bbCodeTitleColor[/LANG]" onclick="ajaxChat.showHide('colorCodesContainer', null);"/>
+      <span id="emoticonsContainer" dir="ltr"></span>
 		</div>
 		<div id="colorCodesContainer" style="display:none;" dir="ltr"></div>
 		<div id="optionsContainer">
-			<input type="image" src="img/pixel.gif" class="button" id="helpButton" alt="[LANG]toggleHelp[/LANG]" title="[LANG]toggleHelp[/LANG]" onclick="toggleContainer('helpContainer', new Array('onlineListContainer','settingsContainer'));"/>
-			<input type="image" src="img/pixel.gif" class="button" id="settingsButton" alt="[LANG]toggleSettings[/LANG]" title="[LANG]toggleSettings[/LANG]" onclick="toggleContainer('settingsContainer', new Array('onlineListContainer','helpContainer'));"/>
-			<input type="image" src="img/pixel.gif" class="button" id="onlineListButton" alt="[LANG]toggleOnlineList[/LANG]" title="[LANG]toggleOnlineList[/LANG]" onclick="toggleContainer('onlineListContainer', new Array('settingsContainer','helpContainer'));"/>
-			<input type="image" src="img/pixel.gif" class="button" id="audioButton" alt="[LANG]toggleAudio[/LANG]" title="[LANG]toggleAudio[/LANG]" onclick="ajaxChat.toggleSetting('audio', 'audioButton');"/>
-			<input type="image" src="img/pixel.gif" class="button" id="autoScrollButton" alt="[LANG]toggleAutoScroll[/LANG]" title="[LANG]toggleAutoScroll[/LANG]" onclick="ajaxChat.toggleSetting('autoScroll', 'autoScrollButton');"/>
+      <input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="logoutButton" alt="[LANG]logout[/LANG]" title="[LANG]logout[/LANG]" onclick="ajaxChat.logout();"/>
+			<input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="helpButton" alt="[LANG]toggleHelp[/LANG]" title="[LANG]toggleHelp[/LANG]" onclick="toggleContainer('helpContainer', new Array('poniconContainer', 'onlineListContainer','settingsContainer'));"/>
+			<input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="poniconButton" alt="Ponicons" title="Ponicons" onclick="toggleContainer('poniconContainer', new Array('onlineListContainer','settingsContainer','helpContainer'));"/>
+			<input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="settingsButton" alt="[LANG]toggleSettings[/LANG]" title="[LANG]toggleSettings[/LANG]" onclick="toggleContainer('settingsContainer', new Array('poniconContainer', 'onlineListContainer','helpContainer'));"/>
+			<input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="onlineListButton" alt="[LANG]toggleOnlineList[/LANG]" title="[LANG]toggleOnlineList[/LANG]" onclick="toggleContainer('onlineListContainer', new Array('poniconContainer', 'settingsContainer','helpContainer'));"/>
+			<input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="audioButton" alt="[LANG]toggleAudio[/LANG]" title="[LANG]toggleAudio[/LANG]" onclick="ajaxChat.toggleSetting('audio', 'audioButton');"/>
+			<input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button" id="autoScrollButton" alt="[LANG]toggleAutoScroll[/LANG]" title="[LANG]toggleAutoScroll[/LANG]" onclick="ajaxChat.toggleSetting('autoScroll', 'autoScrollButton');"/>
   		</div>
 		<div id="onlineListContainer">
 			<h3>[LANG]onlineUsers[/LANG]</h3>
@@ -248,8 +236,15 @@
 						<td class="desc">[LANG]helpItemDescNick[/LANG]</td>
 						<td class="code">[LANG]helpItemCodeNick[/LANG]</td>
 					</tr>
+          <tr class="rowEven">
+						<td class="code" colspan="2">$Id: loggedIn.html 7 2011-10-28 03:09:29Z sylae $</td>
+					</tr>
 				</table>
 			</div>
+	  	</div>
+	  	<div id="poniconContainer" style="display:none;">
+ 			  <h3>Ponicons</h3>
+ 			  <span id="poniconList" dir="ltr"></span>
 	  	</div>
 	  	<div id="settingsContainer" style="display:none;">
  			<h3>[LANG]settings[/LANG]</h3>
@@ -323,37 +318,37 @@
 					<tr class="rowEven">
 						<td><label for="soundReceiveSetting">[LANG]settingsSoundReceive[/LANG]</label></td>
 						<td class="setting">
-							<select id="soundReceiveSetting" onchange="ajaxChat.setSetting('soundReceive', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
+							<select id="soundReceiveSetting" onchange="ajaxChat.setSetting('soundReceive', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
 						</td>
 					</tr>
 					<tr class="rowOdd">
 						<td><label for="soundSendSetting">[LANG]settingsSoundSend[/LANG]</label></td>
 						<td class="setting">
-							<select id="soundSendSetting" onchange="ajaxChat.setSetting('soundSend', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
+							<select id="soundSendSetting" onchange="ajaxChat.setSetting('soundSend', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
 						</td>
 					</tr>
 					<tr class="rowEven">
 						<td><label for="soundEnterSetting">[LANG]settingsSoundEnter[/LANG]</label></td>
 						<td class="setting">
-							<select id="soundEnterSetting" onchange="ajaxChat.setSetting('soundEnter', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
+							<select id="soundEnterSetting" onchange="ajaxChat.setSetting('soundEnter', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
 						</td>
 					</tr>
 					<tr class="rowOdd">
 						<td><label for="soundLeaveSetting">[LANG]settingsSoundLeave[/LANG]</label></td>
 						<td class="setting">
-							<select id="soundLeaveSetting" onchange="ajaxChat.setSetting('soundLeave', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
+							<select id="soundLeaveSetting" onchange="ajaxChat.setSetting('soundLeave', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
 						</td>
 					</tr>
 					<tr class="rowEven">
 						<td><label for="soundChatBotSetting">[LANG]settingsSoundChatBot[/LANG]</label></td>
 						<td class="setting">
-							<select id="soundChatBotSetting" onchange="ajaxChat.setSetting('soundChatBot', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
+							<select id="soundChatBotSetting" onchange="ajaxChat.setSetting('soundChatBot', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
 						</td>
 					</tr>
 					<tr class="rowOdd">
 						<td><label for="soundErrorSetting">[LANG]settingsSoundError[/LANG]</label></td>
 						<td class="setting">
-							<select id="soundErrorSetting" onchange="ajaxChat.setSetting('soundError', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
+							<select id="soundErrorSetting" onchange="ajaxChat.setSetting('soundError', this.options[this.selectedIndex].value);"><option value="">-</option></select><input type="image" src="https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/pixel.gif" class="button playback" alt="[LANG]playSelectedSound[/LANG]" title="[LANG]playSelectedSound[/LANG]" onclick="ajaxChat.playSound(this.previousSibling.options[this.previousSibling.selectedIndex].value);"/>
 						</td>
 					</tr>
 					<tr class="rowEven">
@@ -381,7 +376,6 @@
 		//-->
 		<div id="copyright"><a href="https://blueimp.net/ajax/">AJAX Chat</a> &copy; <a href="https://blueimp.net">blueimp.net</a></div>
 	</div>
-	<div id="flashInterfaceContainer"></div>
 </body>
 
 </html>

@@ -16,5 +16,30 @@
 	#content #bbCodeContainer input, #content #optionsContainer input.button, #content #settingsContainer #settingsList input.button {
 		cursor:pointer;
 	}
-	
+	#content, #content h1, #content a, #content input, #content select, #content textarea, #content #chatList, #content #onlineListContainer, #content #helpContainer, #content #settingsContainer, #content #bbCodeContainer, #content #colorCodesContainer, #content #emoticonsContainer, .statusContainerOn, .statusContainerOff, .statusContainerAlert, #content #bbCodeContainer input, #content #logoutButton, #content #submitButton, #content #colorCodesContainer a, #content #optionsContainer input, #content .rowEven, #content .rowOdd, #content .guest, #content .user, #content .moderator, #content .admin, #content .chatBot, #content #chatList .chatBotErrorMessage, #content #chatList a, #content #onlineListContainer h3, #content #helpContainer h3, #content #settingsContainer h3 {
+	-moz-transition-duration: 0.5s;
+	-moz-transition-timing-function: cubic-bezier(0.2, 0.4, 0.7, 0.8);
+	-webkit-transition-duration: 0.5s;
+	-webkit-transition-timing-function: cubic-bezier(0.2, 0.4, 0.7, 0.8);
+	}
+}
+
+/*
+ * User Colors
+ */
+
+/* anna */
+.user121_crf {
+  color: #9400d3 !important
+}
+
+/* sylae */
+.user16_crf  {
+  text-shadow: 0 0 3px #00ADEE !important
+}
+
+/* tyra */
+.user25_crf  {
+  background: url("../img/flair/flair25.png") no-repeat scroll left center transparent;
+  padding-left: 19px;
 }
