@@ -3,7 +3,7 @@
  * @package AJAX_Chat
  * @author Sebastian Tschan
  * @copyright (c) Sebastian Tschan
- * @license GNU Affero General Public License
+ * @license Modified MIT License
  * @link https://blueimp.net/ajax/
  */
 
@@ -48,6 +48,7 @@ $config['langNames'] = array('en'=>'English');
 
 // Available styles:
 $config['styleAvailable'] = array('omg', 'dash', 'Sulfur', 'Mercury', 'Carbon', 'Technetium');
+
 // Default style:
 $config['styleDefault'] = 'dash';
 

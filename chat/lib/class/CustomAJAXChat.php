@@ -3,7 +3,7 @@
  * @package AJAX_Chat
  * @author Sebastian Tschan
  * @copyright (c) Sebastian Tschan
- * @license GNU Affero General Public License
+ * @license Modified MIT License
  * @link https://blueimp.net/ajax/
  * 
  * phpBB3 integration:
@@ -106,17 +106,19 @@ class CustomAJAXChat extends AJAXChat {
 
 			$this->_channels = array();
 
-
-			$allChannels = $this->getAllChannels();
-
-			foreach($allChannels as $key=>$value) {
+			// Add the valid channels to the channel list (the defaultChannelID is always valid):
+			foreach($this->getAllChannels() as $key=>$value) {
+				if ($value == $this->getConfig('defaultChannelID')) {
+					$this->_channels[$key] = $value;
+					continue;
+				}
 				// Check if we have to limit the available channels:
 				if($this->getConfig('limitChannelList') && !in_array($value, $this->getConfig('limitChannelList'))) {
 					continue;
 				}
 
 				// Add the valid channels to the channel list (the defaultChannelID is always valid):
-				if($value == $this->getConfig('defaultChannelID') || $auth->acl_get('f_read', $value)) {
+				if($auth->acl_get('f_read', $value)) {
 					$this->_channels[$key] = $value;
 				}
 			}
@@ -159,7 +161,9 @@ class CustomAJAXChat extends AJAXChat {
 			$db->sql_freeresult($result);
 
 			if(!$defaultChannelFound) {
-				// Add the default channel as first array element to the channel list:
+				// Add the default channel as first array element to the channel list
+				// First remove it in case it appeard under a different ID
+				unset($this->_allChannels[$this->getConfig('defaultChannelName')]);
 				$this->_allChannels = array_merge(
 					array(
 						$this->trimChannelName($this->getConfig('defaultChannelName'))=>$this->getConfig('defaultChannelID')

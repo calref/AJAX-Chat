@@ -2,7 +2,7 @@
  * @package AJAX_Chat
  * @author Sebastian Tschan
  * @copyright (c) Sebastian Tschan
- * @license GNU Affero General Public License
+ * @license Modified MIT License
  * @link https://blueimp.net/ajax/
  * 
  * The SELFHTML documentation has been used throughout this project:
@@ -83,17 +83,18 @@ var ajaxChat = {
 	originalDocumentTitle: null,
 	blinkInterval: null,
 	httpRequest: null,
-	retryTimer:null,
-	retryTimerDelay:null,
+	retryTimer: null,
+	retryTimerDelay: null,
+	requestStatus: 'ok',
 	DOMbuffering: null,
 	DOMbuffer: null,
 	DOMbufferRowClass: 'rowOdd',
   dronesRioting: null,
 	
 	init: function(config, lang, initSettings, initStyle, initialize, initializeFunction, finalizeFunction) {	
-		this.httpRequest		= new Object();
-		this.usersList			= new Array();
-		this.userNamesList		= new Array();
+		this.httpRequest		= {};
+		this.usersList			= [];
+		this.userNamesList		= [];
 		this.soundObj		= new Array();
 		this.userMenuCounter	= 0;
 		this.lastID				= 0;
@@ -152,11 +153,11 @@ var ajaxChat = {
 		this.socketServerChatID		= config['socketServerChatID'];
 		this.DOMbuffering			= false;
 		this.DOMbuffer				= "";
-		this.retryTimerDelay = this.timerRate + (((this.inactiveTimeout*6000) - this.timerRate)/4);
+		this.retryTimerDelay 		= (this.inactiveTimeout*6000 - this.timerRate)/4 + this.timerRate;
 	},
 
 	initDirectories: function() {
-		this.dirs = new Object();
+		this.dirs = {};
     this.dirs['statuses'] 	= 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/';
 		this.dirs['emoticons'] 	= 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/emoticons/';
 		this.dirs['ponicons'] 	= 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/emoticons/mlp/';
@@ -164,15 +165,15 @@ var ajaxChat = {
 	},
 	
 	initSettings: function() {
+		var cookie = this.readCookie(this.sessionName + '_settings'),
+			i, settingsArray, setting, key, value, number;
 		this.settingsInitiated = true;
-		this.unusedSettings = new Object();
-		var cookie = this.readCookie(this.sessionName + '_settings');
+		this.unusedSettings = {};
 		if(cookie) {
-			var settingsArray = cookie.split('&');
-			var setting,key,value,number;
-			for(var i=0; i<settingsArray.length; i++) {
+			settingsArray = cookie.split('&');
+			for(i=0; i<settingsArray.length; i++) {
 				setting = settingsArray[i].split('=');
-				if(setting.length == 2) {
+				if(setting.length === 2) {
 					key = setting[0];
 					value = this.decodeText(setting[1]);
 					switch(value) {
@@ -188,7 +189,7 @@ var ajaxChat = {
 						default:
 							number = parseFloat(value);
 							if(!isNaN(number)) {
-								if(parseInt(number) == number) {
+								if(parseInt(number) === number) {
 									value = parseInt(number);
 								} else {
 									value = number;
@@ -207,8 +208,9 @@ var ajaxChat = {
 	},
 
 	persistSettings: function() {
+		var settingsArray;
 		if(this.settingsInitiated) {
-			var settingsArray = new Array();
+			settingsArray = [];
 			for(var property in this.settings) {
 				if(this.inArray(this.nonPersistentSettings, property)) {
 					if(this.unusedSettings && this.unusedSettings[property]) {
@@ -231,7 +233,7 @@ var ajaxChat = {
 	getSetting: function(key) {
 		// Only return null if setting is null or undefined, not if it is false:
 		for(var property in this.settings) {
-			if(property == key) {
+			if(property === key) {
 				return this.settings[key];
 			}
 		}
@@ -262,8 +264,8 @@ var ajaxChat = {
 		this.setSelectedStyle();
 		this.customInitialize();
 		//preload the Alert icon (it can't display if there's no connection unless it's cached!)
-		this.setStatus('Alert');
-		if(typeof this.initializeFunction == 'function') {
+		this.setStatus('retrying');
+		if(typeof this.initializeFunction === 'function') {
 			this.initializeFunction();
 		}
 		if(!this.isCookieEnabled()) {
@@ -296,7 +298,7 @@ var ajaxChat = {
 				ajaxChat.startChat();
 				// Reset the onfocus event on first call:
 				ajaxChat.dom['inputField'].onfocus = '';
-			}			
+			};		
 		}
 	},
 	
@@ -317,30 +319,30 @@ var ajaxChat = {
 	setLoadHandler: function() {
 		// Make sure initialize() is called on page load:
   		var onload = window.onload;
-		if(typeof onload != 'function') {
+		if(typeof onload !== 'function') {
 			window.onload = function() {
 				ajaxChat.initialize();
-			}
+			};
 		} else {
 			window.onload = function() {
 				onload();
 				ajaxChat.initialize();
-			}
+			};
 		}		
 	},
 	
 	setUnloadHandler: function() {
 		// Make sure finalize() is called on page unload:
   		var onunload = window.onunload;
-		if(typeof onunload != 'function') {
+		if(typeof onunload !== 'function') {
 			window.onunload = function() {
 				ajaxChat.finalize();
-			}
+			};
 		} else {
 			window.onunload = function() {
 				ajaxChat.finalize();
 				onunload();
-			}
+			};
 		}
 	},
 
@@ -366,7 +368,7 @@ var ajaxChat = {
 	},
 	
 	initializeDocumentNodes: function() {
-		this.dom = new Object();
+		this.dom = {};
 		for(var key in this.domIDs) {
 			this.dom[key] = document.getElementById(this.domIDs[key]);
 		}
@@ -429,20 +431,13 @@ var ajaxChat = {
 					+ ';" title="'
 					+ this.colorCodes[i]
 					+ '"></a>'
-					+ "\n"
+					+ "\n";
 			}
 			this.updateDOM('colorCodesContainer', this.DOMbuffer);
  			this.DOMbuffer = "";
 		}
 	},
-	
-	setStatus: function(currentStatus) {
-		//Make sure the status container div exists before changing its class.
-		if (document.getElementById('statusIconContainer') != null ) {
-			//currentStatus options are: Off for green, On for orange, and Alert for red.
-			document.getElementById('statusIconContainer').className = 'statusContainer' + currentStatus;
-		}
-	},
+
 
 	startChatUpdate: function() {
 		// Start the chat update and retrieve current user and channel info and set the login channel:
@@ -490,8 +485,8 @@ var ajaxChat = {
 				// DOMParser native implementation (Mozilla, Opera):
 				arguments.callee.parser = new DOMParser();
 			} catch(e) {
-				var customDOMParser = function() {}
-				if(navigator.appName == 'Microsoft Internet Explorer') {
+				var customDOMParser = function() {};
+				if(navigator.appName === 'Microsoft Internet Explorer') {
 					// IE implementation:
 					customDOMParser.prototype.parseFromString = function(str, contentType) {
 						if(!arguments.callee.XMLDOM) {
@@ -499,7 +494,7 @@ var ajaxChat = {
 						}
 						arguments.callee.XMLDOM.loadXML(str);
 						return arguments.callee.XMLDOM;	
-					}
+					};
 				} else {
 					// Safari, Konqueror:
 					customDOMParser.prototype.parseFromString = function(str, contentType) {
@@ -513,7 +508,7 @@ var ajaxChat = {
 						);
 						arguments.callee.httpRequest.send(null);
 						return arguments.callee.httpRequest.responseXML;
-					}
+					};
 				}
 				arguments.callee.parser = new customDOMParser();
 			}
@@ -564,8 +559,8 @@ var ajaxChat = {
 
 	soundIOErrorHandler: function(event) {
 		// setTimeout is needed to avoid calling the flash interface recursively (e.g. sound on new messages):
-		setTimeout('ajaxChat.addChatBotMessageToChatList(\'/error SoundIO\')', 0);
-		setTimeout('ajaxChat.updateChatlistView()', 1);
+		setTimeout(function() { ajaxChat.addChatBotMessageToChatList('/error SoundIO'); }, 0);
+		setTimeout(ajaxChat.updateChatlistView, 1);
 	},
 	
 	soundPlayCompleteHandler: function(event) {
@@ -621,11 +616,39 @@ var ajaxChat = {
 		var i = 1;
 		for(var key in this.soundFiles) {
 			selection.options[i] = new Option(key, key);
-			if(key == selectedSound){
+			if(key === selectedSound){
 				selection.options[i].selected = true;
 			}
 			i++;
 		}
+	},
+
+	setStatus: function(newStatus) {
+		// status options are: ok, retrying, waiting
+		if (this.requestStatus !== 'retrying' || newStatus === 'ok') {
+			this.requestStatus = newStatus;
+		}
+		
+		var statusIcon = document.getElementById('statusIconContainer');
+
+		if (statusIcon) {
+			switch (this.requestStatus) {
+				case 'ok':
+					this.setClass(statusIcon, 'statusContainerOff');
+					break;
+				case 'waiting':
+					this.setClass(statusIcon, 'statusContainerOn');
+					break;
+				case 'retrying':
+					this.setClass(statusIcon, 'statusContainerAlert');
+					break;
+			}
+		}
+	},
+	
+	forceNewRequest: function() {
+		ajaxChat.updateChat(null); 
+		ajaxChat.setStatus('retrying');
 	},
 	
 	getHttpRequest: function(identifier) {
@@ -648,12 +671,12 @@ var ajaxChat = {
 		}
 		return this.httpRequest[identifier];
 	},
-	
+
 	makeRequest: function(url, method, data) {
-		ajaxChat.setStatus('On');
-		ajaxChat.retryTimer = setTimeout("ajaxChat.updateChat(null); ajaxChat.setStatus('Alert');", this.retryTimerDelay);
+		var identifier;
+		this.setStatus('waiting');
+		
 		try {
-			var identifier;
 			if(data) {
 				// Create up to 50 HTTPRequest objects:
 				if(!arguments.callee.identifier || arguments.callee.identifier > 50) {
@@ -665,6 +688,9 @@ var ajaxChat = {
 			} else {
 				identifier = 0;
 			}
+			//if the response takes longer than retryTimerDelay to give an OK status, abort the connection and start again.
+			this.retryTimer = setTimeout(ajaxChat.forceNewRequest, ajaxChat.retryTimerDelay);
+			
 			this.getHttpRequest(identifier).open(method, url, true);
 			this.getHttpRequest(identifier).onreadystatechange = function() {
 				try {
@@ -678,20 +704,20 @@ var ajaxChat = {
 					try {
 						if(data) {
 							ajaxChat.addChatBotMessageToChatList('/error ConnectionTimeout');
-							ajaxChat.setStatus('Alert');
+							ajaxChat.setStatus('retrying');
 							ajaxChat.updateChatlistView();
 						}
 					} catch(e) {
 						//alert(e);
 					}
 					try {				
-						ajaxChat.timer = setTimeout('ajaxChat.updateChat(null);', ajaxChat.timerRate);
+						ajaxChat.timer = setTimeout(function() { ajaxChat.updateChat(null); }, ajaxChat.timerRate);
 					} catch(e) {
 						//alert(e);
 					}
 				}
 			};
-			if(method == 'POST') {
+			if(method === 'POST') {
 				this.getHttpRequest(identifier).setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 			}
 			this.getHttpRequest(identifier).send(data);
@@ -699,28 +725,29 @@ var ajaxChat = {
 			clearTimeout(this.timer);
 			if(data) {
 				this.addChatBotMessageToChatList('/error ConnectionTimeout');
-				ajaxChat.setStatus('Alert');
+				ajaxChat.setStatus('retrying');
 				this.updateChatlistView();
 			}
-			this.timer = setTimeout('ajaxChat.updateChat(null);', this.timerRate);
+			this.timer = setTimeout(function() { ajaxChat.updateChat(null); }, this.timerRate);
 		}
 	},
 		
 	handleResponse: function(identifier) {
-		if (this.getHttpRequest(identifier).readyState == 4) {
-			if (this.getHttpRequest(identifier).status == 200) {
+		var xmlDoc;
+		if (this.getHttpRequest(identifier).readyState === 4) {
+			if (this.getHttpRequest(identifier).status === 200) {
 				clearTimeout(ajaxChat.retryTimer);
-				var xmlDoc = this.getHttpRequest(identifier).responseXML;
-				ajaxChat.setStatus('Off');
+				xmlDoc = this.getHttpRequest(identifier).responseXML;
+				ajaxChat.setStatus('ok');
 			} else {
 				// Connection status 0 can be ignored.
-				if (this.getHttpRequest(identifier).status == 0) {
-					ajaxChat.setStatus('On');
+				if (this.getHttpRequest(identifier).status === 0) {
+					this.setStatus('waiting');
 					this.updateChatlistView();
 					return false;
 				} else {
 					this.addChatBotMessageToChatList('/error ConnectionStatus '+this.getHttpRequest(identifier).status);
-					ajaxChat.setStatus('Alert');
+					this.setStatus('retrying');
 					this.updateChatlistView();				
 					return false;
 				}
@@ -747,7 +774,7 @@ var ajaxChat = {
 		if(this.chatStarted) {
 			var timeout;
 			timeout = this.timerRate;
-			this.timer = setTimeout('ajaxChat.updateChat(null);', timeout);			
+			this.timer = setTimeout(function() {ajaxChat.updateChat(null);}, timeout);			
 		}
 	},
 	
@@ -797,9 +824,9 @@ var ajaxChat = {
 
 	handleOnlineUsers: function(userNodes) {
 		if(userNodes.length) {
-			var index,userID,userName,userRole,isAway;
-			var onlineUsers = new Array();
-			for(var i=0; i<userNodes.length; i++) {
+			var index,userID,userName,userRole,isAway,i,
+				onlineUsers = [];
+			for(i=0; i<userNodes.length; i++) {
 				userID = userNodes[i].getAttribute('userID');
 				userName = userNodes[i].firstChild ? userNodes[i].firstChild.nodeValue : '';
 				userRole = userNodes[i].getAttribute('userRole');
@@ -811,7 +838,7 @@ var ajaxChat = {
 						userName,
 						userRole
 					);
-				} else if(this.userNamesList[index] != userName) {
+				} else if(this.userNamesList[index] !== userName) {
 					this.removeUserFromOnlineList(userID, index);
 					this.addUserToOnlineList(
 						userID,
@@ -821,7 +848,7 @@ var ajaxChat = {
 				}
 			}
 			// Clear the offline users from the online users list:
-			for(var i=0; i<this.usersList.length; i++) {
+			for(i=0; i<this.usersList.length; i++) {
 				if(!this.inArray(onlineUsers, this.usersList[i])) {
 					this.removeUserFromOnlineList(this.usersList[i], i);
 				}
@@ -831,15 +858,15 @@ var ajaxChat = {
 	},
 
 	handleChatMessages: function(messageNodes) {
+		var userNode,userName,textNode,messageText,i;
 		if(messageNodes.length) {
-			var userNode,userName,textNode,messageText;		
-			for(var i=0; i<messageNodes.length; i++) {
+			for(i=0; i<messageNodes.length; i++) {
 				this.DOMbuffering = true;
 				userNode = messageNodes[i].getElementsByTagName('username')[0];
 				userName = userNode.firstChild ? userNode.firstChild.nodeValue : '';
 				textNode = messageNodes[i].getElementsByTagName('text')[0];
 				messageText = textNode.firstChild ? textNode.firstChild.nodeValue : '';
-				if (i == (messageNodes.length - 1)) {this.DOMbuffering = false;}
+				if (i === (messageNodes.length - 1)) {this.DOMbuffering = false;}
 				this.addMessageToChatList(
 						new Date(messageNodes[i].getAttribute('dateTime')),
 						messageNodes[i].getAttribute('userID'),
@@ -858,12 +885,13 @@ var ajaxChat = {
 	},
 	
 	setSelectedChannel: function(channel) {
+		var channelSelected = false,
+			i,option,text;
 		if(this.dom['channelSelection']) {
 			// Replace the entities in the channel name with their character equivalent:
 			channel = this.decodeSpecialChars(channel);
-			var channelSelected = false;
-			for(var i=0; i<this.dom['channelSelection'].options.length; i++) {
-				if(this.dom['channelSelection'].options[i].value == channel) {
+			for(i=0; i<this.dom['channelSelection'].options.length; i++) {
+				if(this.dom['channelSelection'].options[i].value === channel) {
 					this.dom['channelSelection'].options[i].selected = true;
 					channelSelected = true;
 					break;
@@ -871,8 +899,8 @@ var ajaxChat = {
 			}
 			// The given channel is not in the list, add it:
 			if(!channelSelected) {
-				var option = document.createElement('option');
-				var text = document.createTextNode(channel);
+				option = document.createElement('option');
+				text = document.createTextNode(channel);
 				option.appendChild(text);
 				option.setAttribute('value', channel);
 				option.setAttribute('selected', 'selected');			
@@ -896,17 +924,18 @@ var ajaxChat = {
 			this.updateDOM(
 				'onlineList',
 				this.getUserNodeString(userID, userName, userRole),
-				(this.userID == userID)
+				(this.userID === userID)
 			);
 		}
 	},
 
 	getUserNodeString: function(userID, userName, userRole) {
-		if(this.userNodeString && userID == this.userID) {
+		var encodedUserName, str;
+		if(this.userNodeString && userID === this.userID) {
 			return this.userNodeString;
 		} else {
-			var encodedUserName = this.scriptLinkEncode(userName);
-			var str	= '<div id="'
+			encodedUserName = this.scriptLinkEncode(userName);
+			str	= '<div id="'
 					+ this.getUserDocumentID(userID)
 					+ '"><a href="javascript:ajaxChat.toggleUserMenu(\''
 					+ this.getUserMenuDocumentID(userID)
@@ -929,12 +958,12 @@ var ajaxChat = {
 					+ '<ul class="userMenu" id="'
 					+ this.getUserMenuDocumentID(userID)
 					+ '"'
-					+ ((userID == this.userID) ?
+					+ ((userID === this.userID) ?
 						'>'+this.getUserNodeStringItems(encodedUserName, userID, false) :
 						' style="display:none;">')
 					+ '</ul>'
 					+'</div>';
-			if(userID == this.userID) {
+			if(userID === this.userID) {
 				this.userNodeString = str;
 			}
 			return str;	
@@ -965,7 +994,7 @@ var ajaxChat = {
 	
 	getUserNodeStringItems: function(encodedUserName, userID, isInline) {
 		var menu;
-		if(encodedUserName != this.encodedUserName) {
+		if(encodedUserName !== this.encodedUserName) {
 			menu 	= '<li><a href="javascript:ajaxChat.insertMessageWrapper(\'/msg '
 					+ encodedUserName
 					+ ' \');">'
@@ -1006,7 +1035,7 @@ var ajaxChat = {
 					+ this.lang['userMenuWhereis']
 					+ '</a></li>';
 			}
-			if(this.userRole == 2 || this.userRole == 3) {
+			if(this.userRole === '2' || this.userRole === '3') {
 				menu	+= '<li><a href="javascript:ajaxChat.insertMessageWrapper(\'/kick '
 						+ encodedUserName
 						+ ' \');">'
@@ -1040,11 +1069,11 @@ var ajaxChat = {
 					+ '<li><a href="javascript:ajaxChat.insertMessageWrapper(\'/nick \');">'
 					+ this.lang['userMenuNick']
 					+ '</a></li>';
-			if(this.userRole == 1 || this.userRole == 2 || this.userRole == 3) {
+			if(this.userRole === '1' || this.userRole === '2' || this.userRole === '3') {
 				menu	+= '<li><a href="javascript:ajaxChat.sendMessageWrapper(\'/join\');">'
 						+ this.lang['userMenuEnterPrivateRoom']
 						+ '</a></li>';
-				if(this.userRole == 2 || this.userRole == 3) {
+				if(this.userRole === '2' || this.userRole === '3') {
 					menu	+= '<li><a href="javascript:ajaxChat.sendMessageWrapper(\'/bans\');">'
 							+ this.lang['userMenuBans']
 							+ '</a></li>';
@@ -1060,7 +1089,7 @@ var ajaxChat = {
 			var node = this.dom['onlineList'].firstChild;			
 			var rowEven = false;
 			while(node) {
-				this.setClass(node, (rowEven ? 'rowEven' : 'rowOdd'))
+				this.setClass(node, (rowEven ? 'rowEven' : 'rowOdd'));
 				node = node.nextSibling;
 				rowEven = !rowEven;
 			}
@@ -1074,8 +1103,8 @@ var ajaxChat = {
 	},
 
 	clearOnlineUsersList: function() {
-		this.usersList = new Array();
-		this.userNamesList = new Array();
+		this.usersList = [];
+		this.userNamesList = [];
 		if(this.dom['onlineList']) {
 			while(this.dom['onlineList'].hasChildNodes()) {
 				this.dom['onlineList'].removeChild(this.dom['onlineList'].firstChild);
@@ -1084,7 +1113,7 @@ var ajaxChat = {
 	},
 
 	getEncodedChatBotName: function() {
-		if(typeof arguments.callee.encodedChatBotName == 'undefined') {
+		if(typeof arguments.callee.encodedChatBotName === 'undefined') {
 			arguments.callee.encodedChatBotName = this.encodeSpecialChars(this.chatBotName);
 		}
 		return arguments.callee.encodedChatBotName;
@@ -1110,13 +1139,13 @@ var ajaxChat = {
 		if(!this.onNewMessage(dateObject, userID, userName, userRole, messageID, messageText, channelID, ip)) {
 			return;
 		}
-		this.DOMbufferRowClass = this.DOMbufferRowClass == 'rowEven' ? 'rowOdd' : 'rowEven';
+		this.DOMbufferRowClass = this.DOMbufferRowClass === 'rowEven' ? 'rowOdd' : 'rowEven';
 		this.DOMbuffer = this.DOMbuffer + 
 			this.getChatListMessageString(
 				dateObject, userID, userName, userRole, messageID, messageText, channelID, ip
 			);
 		if(!this.DOMbuffering){
- 			this.updateDOM('chatList', this.DOMbuffer)
+ 			this.updateDOM('chatList', this.DOMbuffer);
  			this.DOMbuffer = "";
  		}
 	},
@@ -1125,7 +1154,7 @@ var ajaxChat = {
 		var rowClass = this.DOMbufferRowClass;
 		var userClass = this.getRoleClass(userRole);
 		var colon;
-		if(messageText.indexOf('/action') == 0 || messageText.indexOf('/me') == 0 || messageText.indexOf('/privaction') == 0) {
+		if(messageText.indexOf('/action') === 0 || messageText.indexOf('/me') === 0 || messageText.indexOf('/privaction') === 0) {
 			userClass += ' action';
 			colon = ' ';
 		} else {
@@ -1159,7 +1188,7 @@ var ajaxChat = {
 	},
 	
 	getChatListUserNameTitle: function(userID, userName, userRole, ip) {
-		return (ip != null) ? ' title="IP: ' + ip + '"' : '';		
+		return (ip !== null) ? ' title="IP: ' + ip + '"' : '';		
 	},
 	
 	getMessageDocumentID: function(messageID) {
@@ -1195,16 +1224,16 @@ var ajaxChat = {
 					+ arguments.callee.deleteMessage
 					+ '" href="javascript:ajaxChat.deleteMessage('
 					+ messageID
-					+ ');"> </a>' // Adding a space - without any content Opera messes up the chatlist display
+					+ ');"> </a>'; // Adding a space - without any content Opera messes up the chatlist display
 		}
 		return '';
 	},
 	
 	isAllowedToDeleteMessage: function(messageID, userID, userRole, channelID) {
-		if((((this.userRole == 1 && this.allowUserMessageDelete && (userID == this.userID ||
-			parseInt(channelID) == parseInt(this.userID)+this.privateMessageDiff ||
-			parseInt(channelID) == parseInt(this.userID)+this.privateChannelDiff)) ||
-			this.userRole == 2) && userRole != 3 && userRole != 4) || this.userRole == 3) {
+		if((((this.userRole === '1' && this.allowUserMessageDelete && (userID === this.userID ||
+			parseInt(channelID) === parseInt(this.userID)+this.privateMessageDiff ||
+			parseInt(channelID) === parseInt(this.userID)+this.privateChannelDiff)) ||
+			this.userRole === '2') && userRole !== '3' && userRole !== '4') || this.userRole === '3') {
 			return true;
 		}
 		return false;
@@ -1226,7 +1255,7 @@ var ajaxChat = {
 	},
 
 	parseDeleteMessageCommand: function(messageText) {
-		if(messageText.indexOf('/delete') == 0) {
+		if(messageText.indexOf('/delete') === 0) {
 			var messageID = messageText.substr(8);
 			var messageNode = this.getMessageNode(messageID);
 			if(messageNode) {
@@ -1245,7 +1274,7 @@ var ajaxChat = {
 	},
 	
 	blinkOnNewMessage: function(dateObject, userID, userName, userRole, messageID, messageText, channelID, ip) {
-		if(this.settings['blink'] && this.lastID && !this.channelSwitch && userID != this.userID) {
+		if(this.settings['blink'] && this.lastID && !this.channelSwitch && userID !== this.userID) {
 			clearInterval(this.blinkInterval);
 			this.blinkInterval = setInterval(
 				'ajaxChat.blinkUpdate(\''+this.addSlashes(this.decodeSpecialChars(userName))+'\')',
@@ -1266,7 +1295,7 @@ var ajaxChat = {
 			document.title = this.originalDocumentTitle;
 			arguments.callee.blink = 0;
 		} else {
-			if(arguments.callee.blink % 2 != 0) {
+			if(arguments.callee.blink % 2 !== 0) {
 				document.title = '[@ ] '+blinkStr+' - '+this.originalDocumentTitle;
 			} else {
 				document.title = '[ @] '+blinkStr+' - '+this.originalDocumentTitle;
@@ -1337,12 +1366,8 @@ var ajaxChat = {
 	},
 
 	encodeSpecialChars: function(text) {
-		if (!arguments.callee.regExp) {
-			arguments.callee.regExp = new RegExp('[&<>\'"]', 'g');
-		}
-		
 		return text.replace(
-			arguments.callee.regExp,
+			/[&<>'"]/g,
 			this.encodeSpecialCharsCallback
 		);
 	},
@@ -1366,12 +1391,10 @@ var ajaxChat = {
 	},
 
 	decodeSpecialChars: function(text) {
-		if (!arguments.callee.regExp) {
-			arguments.callee.regExp = new RegExp('(&amp;)|(&lt;)|(&gt;)|(&#39;)|(&quot;)', 'g');
-		}
+		var regExp = new RegExp('(&amp;)|(&lt;)|(&gt;)|(&#39;)|(&quot;)', 'g');
 		
 		return text.replace(
-			arguments.callee.regExp,
+			regExp,
 			this.decodeSpecialCharsCallback
 		);
 	},
@@ -1500,7 +1523,7 @@ var ajaxChat = {
 	},
 	
 	handleInputFieldKeyPress: function(event) {
-		if(event.keyCode == 13 && !event.shiftKey) {
+		if(event.keyCode === 13 && !event.shiftKey) {
 			this.sendMessage();
 			try {
 				event.preventDefault();
@@ -1525,7 +1548,7 @@ var ajaxChat = {
 				this.dom['inputField'].value.length,
 				false,
 				true
-			)
+			);
 		}
 	},
 	
@@ -1549,11 +1572,16 @@ var ajaxChat = {
 	},
 	
 	parseInputMessage: function(text) {
-		if(text.charAt(0) == '/') {
-			var textParts = text.split(' ');
+		var textParts;
+		if(text.charAt(0) === '/') {
+			textParts = text.split(' ');
 			switch(textParts[0]) {
 				case '/ignore':
 					text = this.parseIgnoreInputCommand(text, textParts);
+					break;
+				case '/clear':
+					this.clearChatList();
+					return false;
 					break;
 				default:
 					text = this.parseCustomInputCommand(text, textParts);
@@ -1599,16 +1627,16 @@ var ajaxChat = {
 	},
 	
 	parseIgnoreInputCommand: function(text, textParts) {
-		var ignoredUserNames = this.getIgnoredUserNames();
+		var userName, ignoredUserNames = this.getIgnoredUserNames(), i;
 		if(textParts.length > 1) {
-			var userName = this.encodeSpecialChars(textParts[1]);
+			userName = this.encodeSpecialChars(textParts[1]);
 			// Prevent adding the chatBot or current user to the list:
-			if(userName == this.userName || userName == this.getEncodedChatBotName()) {
+			if(userName === this.userName || userName === this.getEncodedChatBotName()) {
 				// Display the list of ignored users instead:
 				return this.parseIgnoreInputCommand(null, new Array('/ignore'));
 			}
 			if(ignoredUserNames.length > 0) {
-				var i = ignoredUserNames.length;
+				i = ignoredUserNames.length;
 				while(i--) {
 					if(ignoredUserNames[i] === userName) {
 						ignoredUserNames.splice(i,1);
@@ -1623,7 +1651,7 @@ var ajaxChat = {
 			this.addChatBotMessageToChatList('/ignoreAdded '+userName);
 			this.setIgnoredUserNames(ignoredUserNames);
 		} else {
-			if(ignoredUserNames.length == 0) {
+			if(ignoredUserNames.length === 0) {
 				this.addChatBotMessageToChatList('/ignoreListEmpty -');
 			} else {
 				this.addChatBotMessageToChatList('/ignoreList '+ignoredUserNames.join(' '));
@@ -1634,12 +1662,13 @@ var ajaxChat = {
 	},
 
 	getIgnoredUserNames: function() {
+		var ignoredUserNamesString;
 		if(!this.ignoredUserNames) {
-			var ignoredUserNamesString = this.getSetting('ignoredUserNames');
+			ignoredUserNamesString = this.getSetting('ignoredUserNames');
 			if(ignoredUserNamesString) {
 				this.ignoredUserNames = ignoredUserNamesString.split(' ');
 			} else {
-				this.ignoredUserNames = new Array();
+				this.ignoredUserNames = [];
 			}
 		}
 		return this.ignoredUserNames;
@@ -1651,8 +1680,9 @@ var ajaxChat = {
 	},
 	
 	ignoreMessage: function(dateObject, userID, userName, userRole, messageID, messageText, channelID, ip) {
-		if(userID == this.chatBotID && messageText.charAt(0) == '/') {
-			var textParts = messageText.split(' ');
+		var textParts;
+		if(userID === this.chatBotID && messageText.charAt(0) === '/') {
+			textParts = messageText.split(' ');
 			if(textParts.length > 1) {
 				switch(textParts[0]) {
 					case '/invite':
@@ -1670,12 +1700,12 @@ var ajaxChat = {
 	},
 
 	deleteMessage: function(messageID) {
-		var messageNode = this.getMessageNode(messageID);
+		var messageNode = this.getMessageNode(messageID), originalClass, nextSibling;
 		if(messageNode) {
-			var originalClass = this.getClass(messageNode);
+			originalClass = this.getClass(messageNode);
 			this.setClass(messageNode, originalClass+' deleteSelected');
 			if(confirm(this.lang['deleteMessageConfirm'])) {
-				var nextSibling = messageNode.nextSibling;
+				nextSibling = messageNode.nextSibling;
 				try {
 					this.dom['chatList'].removeChild(messageNode);
 					if(nextSibling) {
@@ -1692,14 +1722,15 @@ var ajaxChat = {
 	},
 
 	updateChatListRowClasses: function(node) {
+		var previousNode, rowEven;
 		if(!node) {
 			node = this.dom['chatList'].firstChild;
 		}
 		if(node) {
-			var previousNode = node.previousSibling;
-			var rowEven = (previousNode && this.getClass(previousNode) == 'rowOdd') ? true : false;
+			previousNode = node.previousSibling;
+			rowEven = (previousNode && this.getClass(previousNode) === 'rowOdd') ? true : false;
 			while(node) {
-				this.setClass(node, (rowEven ? 'rowEven' : 'rowOdd'))
+				this.setClass(node, (rowEven ? 'rowEven' : 'rowOdd'));
 				node = node.nextSibling;
 				rowEven = !rowEven;
 			}
@@ -1707,7 +1738,7 @@ var ajaxChat = {
 	},
 	
 	getClass: function(node) {
-		if(typeof node.className != 'undefined') {
+		if(typeof node.className !== 'undefined') {
 			return node.className; // IE
 		} else {
 			return node.getAttribute('class');
@@ -1715,7 +1746,7 @@ var ajaxChat = {
 	},
 	
 	setClass: function(node, className) {
-		if(typeof node.className != 'undefined') {
+		if(typeof node.className !== 'undefined') {
 			node.className = className; // IE
 		} else {
 			node.setAttribute('class', className);
@@ -1733,7 +1764,7 @@ var ajaxChat = {
 	getScriptLinkValue: function(value) {
 		// This method returns plainText encoded values from javascript links
 		// The value has to be utf8Decoded for MSIE and Opera:
-		if(typeof arguments.callee.utf8Decode == 'undefined') {
+		if(typeof arguments.callee.utf8Decode === 'undefined') {
 			switch(navigator.appName) {
 				case 'Microsoft Internet Explorer':
 				case 'Opera':
@@ -1798,7 +1829,7 @@ var ajaxChat = {
 	updateButton: function(setting, buttonID) {
 		var node = document.getElementById(buttonID);
 		if(node) {
-			this.setClass(node, (this.getSetting(setting) ? 'button' : 'button off'))
+			this.setClass(node, (this.getSetting(setting) ? 'button' : 'button off'));
 		}
 	},
 	
@@ -1808,7 +1839,7 @@ var ajaxChat = {
 			if(styleDisplay) {
 				node.style.display = styleDisplay;
 			} else {
-				if(node.style.display == 'none') {
+				if(node.style.display === 'none') {
 					node.style.display = (displayInline ? 'inline' : 'block'); 
 				} else {
 					node.style.display = 'none';
@@ -1868,14 +1899,14 @@ var ajaxChat = {
 	insert: function(startTag, endTag) {
 		this.dom['inputField'].focus();
 		// Internet Explorer:
-		if(typeof document.selection != 'undefined') {
+		if(typeof document.selection !== 'undefined') {
 			// Insert the tags:
 			var range = document.selection.createRange();
 			var insText = range.text;
 			range.text = startTag + insText + endTag;
 			// Adjust the cursor position:
 			range = document.selection.createRange();
-			if (insText.length == 0) {
+			if (insText.length === 0) {
 				range.move('character', -endTag.length);
 			} else {
 				range.moveStart('character', startTag.length + insText.length + endTag.length);			
@@ -1883,7 +1914,7 @@ var ajaxChat = {
 			range.select();
 		}
 		// Firefox, etc. (Gecko based browsers):
-		else if(typeof this.dom['inputField'].selectionStart != 'undefined') {
+		else if(typeof this.dom['inputField'].selectionStart !== 'undefined') {
 			// Insert the tags:
 			var start = this.dom['inputField'].selectionStart;
 			var end = this.dom['inputField'].selectionEnd;
@@ -1895,7 +1926,7 @@ var ajaxChat = {
 											+ this.dom['inputField'].value.substr(end);
 			// Adjust the cursor position:
 			var pos;
-			if (insText.length == 0) {
+			if (insText.length === 0) {
 				pos = start + startTag.length;
 			} else {
 				pos = start + startTag.length + insText.length + endTag.length;
@@ -1916,7 +1947,7 @@ var ajaxChat = {
 	replaceText: function(text) {
 		try{
 			text = this.replaceLineBreaks(text);
-			if(text.charAt(0) == '/') {
+			if(text.charAt(0) === '/') {
 				text = this.replaceCommands(text);
 			} else {
 				text = this.replaceBBCode(text);
@@ -1934,7 +1965,7 @@ var ajaxChat = {
 	
 	replaceCommands: function(text) {
 		try {
-			if(text.charAt(0) != '/') {
+			if(text.charAt(0) !== '/') {
 				return text;
 			}
 			var textParts = text.split(' ');				
@@ -2021,7 +2052,7 @@ var ajaxChat = {
 
 	replaceCommandLogout: function(textParts) {
 		var type = '';
-		if(textParts.length == 3)
+		if(textParts.length === 3)
 			type = textParts[2];
 		return	'<span class="chatBotMessage">'
 				+ this.lang['logout' + type].replace(/%s/, textParts[1])
@@ -2211,10 +2242,10 @@ var ajaxChat = {
 		
 	replaceCommandList: function(textParts) {
 		var channels = textParts.slice(1);
-		var listChannels = new Array();
+		var listChannels = [];
 		var channelName;
 		for(var i=0; i<channels.length; i++) {
-			channelName = (channels[i] == this.channelName) ? '<b>'+channels[i]+'</b>' : channels[i];
+			channelName = (channels[i] === this.channelName) ? '<b>'+channels[i]+'</b>' : channels[i];
 			listChannels.push(
 				'<a href="javascript:ajaxChat.sendMessageWrapper(\'/join '
 				+ this.scriptLinkEncode(channels[i])
@@ -2233,7 +2264,7 @@ var ajaxChat = {
 		
 	replaceCommandBans: function(textParts) {
 		var users = textParts.slice(1);
-		var listUsers = new Array();
+		var listUsers = [];
 		for(var i=0; i<users.length; i++) {
 			listUsers.push(
 				'<a href="javascript:ajaxChat.sendMessageWrapper(\'/unban '
@@ -2327,7 +2358,7 @@ var ajaxChat = {
 					+ '" dir="'
 					+ this.baseDirection
 					+ '">'
-					+ ((users[i] == this.userName) ? '<b>'+users[i]+'</b>' : users[i])
+					+ ((users[i] === this.userName) ? '<b>'+users[i]+'</b>' : users[i])
 					+ '</a>'
 					+ '<ul class="inlineUserMenu" id="'
 					+ this.getInlineUserMenuDocumentID(this.userMenuCounter, i)
@@ -2337,47 +2368,51 @@ var ajaxChat = {
 		this.userMenuCounter++;
 		return menu;
 	},
-	
+
 	containsUnclosedTags: function(str) {
-		if (!arguments.callee.regExpOpenTags || !arguments.callee.regExpCloseTags) {
-			arguments.callee.regExpOpenTags		= new RegExp('<[^>\\/]+?>', 'gm');
-			arguments.callee.regExpCloseTags	= new RegExp('<\\/[^>]+?>', 'gm');
-		}	
-		var openTags	= str.match(arguments.callee.regExpOpenTags);
-		var closeTags	= str.match(arguments.callee.regExpCloseTags);
+		var openTags, closeTags,
+			regExpOpenTags = /<[^>\/]+?>/gm,
+			regExpCloseTags = /<\/[^>]+?>/gm;
+	
+		openTags	= str.match(regExpOpenTags);
+		closeTags	= str.match(regExpCloseTags);
 		// Return true if the number of tags doesn't match:
 		if((!openTags && closeTags) ||
 			(openTags && !closeTags) ||
-			(openTags && closeTags && (openTags.length != closeTags.length))) {
+			(openTags && closeTags && (openTags.length !== closeTags.length))) {
 			return true;
 		}
 		return false;
 	},
 		
 	breakLongWords: function(text) {
+		var newText, charCounter, currentChar, withinTag, withinEntity, i;
+	
 		if(!this.settings['wordWrap'])
 			return text;
-		var newText = '';
-		var charCounter = 0;
-		var currentChar, withinTag, withinEntity;
 		
-		for(var i=0; i<text.length; i++) {
+		newText = '';
+		charCounter = 0;
+		
+		for(i=0; i<text.length; i++) {
 			currentChar = text.charAt(i);
 			
 			// Check if we are within a tag or entity:
-			if(currentChar == '<') {
+			if(currentChar === '<') {
 				withinTag = true;
 				// Reset the charCounter after newline tags (<br/>):
-				if(i>5 && text.substr(i-5,4) == '<br/')
+				if(i>5 && text.substr(i-5,4) === '<br/')
 					charCounter = 0;				
-			} else if(withinTag && i>0 && text.charAt(i-1) == '>') {
+			} else if(withinTag && i>0 && text.charAt(i-1) === '>') {
 				withinTag = false;
 				// Reset the charCounter after newline tags (<br/>):
-				if(i>4 && text.substr(i-5,4) == '<br/')
+				if(i>4 && text.substr(i-5,4) === '<br/')
 					charCounter = 0;
-			} else if(currentChar == '&') {
+			}
+			
+			if(!withinTag && currentChar === '&') {
 				withinEntity = true;
-			} else if(withinEntity && i>0 && text.charAt(i-1) == ';') {
+			} else if(withinEntity && i>0 && text.charAt(i-1) === ';') {
 				withinEntity = false;
 				// We only increase the charCounter once for the whole entiy:
 				charCounter++;
@@ -2385,7 +2420,7 @@ var ajaxChat = {
 				
 			if(!withinTag && !withinEntity) {
 				// Reset the charCounter if we encounter a word boundary:
-				if(currentChar == ' ' || currentChar == '\n' || currentChar == '\t') {
+				if(currentChar === ' ' || currentChar === '\n' || currentChar === '\t') {
 					charCounter = 0;
 				} else {
 					// We are not within a tag or entity, increase the charCounter:
@@ -2393,7 +2428,7 @@ var ajaxChat = {
 				}
 				if(charCounter > this.settings['maxWordLength']) {
 					// maxWordLength has been reached, break here and reset the charCounter:
-					newText += this.getBreakString();
+					newText += '&#8203;';
 					charCounter = 0;
 				}
 			}		
@@ -2404,37 +2439,14 @@ var ajaxChat = {
 		return newText;
 	},
 	
-	getBreakString: function() {
-		// Returns the character sequence used to wrap long words
-		if(typeof arguments.callee.breakString == 'undefined') {
-			arguments.callee.breakString = '&#8203;';
-		}
-		return arguments.callee.breakString;
-	},
-	
 	replaceBBCode: function(text) {
 		if(!this.settings['bbCode']) {
 			// If BBCode is disabled, just strip the text from BBCode tags:
-			if (!arguments.callee.regExpStripBBCode) {
-				arguments.callee.regExpStripBBCode = new RegExp(
-					'\\[(?:\\/)?(\\w+)(?:=([^<>]*?))?\\]',
-					'gm'
-				);
-			}		
-			return text.replace(
-				arguments.callee.regExpStripBBCode,
-				''
-			);
+			return text.replace(/\[(?:\/)?(\w+)(?:=([^<>]*?))?\]/, '');
 		}
 		// Remove the BBCode tags:
-		if (!arguments.callee.regExp) {
-			arguments.callee.regExp = new RegExp(
-				'\\[(\\w+)(?:=([^<>]*?))?\\](.+?)\\[\\/\\1\\]',
-				'gm'
-			);
-		}		
 		return text.replace(
-			arguments.callee.regExp,
+			/\[(\w+)(?:=([^<>]*?))?\](.+?)\[\/\1\]/gm, 
 			this.replaceBBCodeCallback
 		);
 	},
@@ -2443,11 +2455,11 @@ var ajaxChat = {
 		// Only replace predefined BBCode tags:
 		if(!ajaxChat.inArray(ajaxChat.bbCodeTags, p1)) {
 			return str;
-		}	
+		}
 		// Avoid invalid XHTML (unclosed tags):
 		if(ajaxChat.containsUnclosedTags(p3)) {
 			return str;
-		}			
+		}	
 		switch(p1) {
 			case 'color':
       case 'COLOR':
@@ -2466,7 +2478,7 @@ var ajaxChat = {
 				return ajaxChat.replaceBBCodeUnderline(p3);
 			default:
 				return ajaxChat.replaceCustomBBCode(p1, p2, p3);
-		}	
+		}
 	},
 
 	replaceBBCodeColor: function(content, attribute) {
@@ -2483,18 +2495,16 @@ var ajaxChat = {
 	},
 	
 	replaceBBCodeUrl: function(content, attribute) {
-		var url;
+		var url, regExpUrl;
 		if(attribute)
 			url = attribute.replace(/\s/gm, this.encodeText(' '));
 		else
 			url = this.stripBBCodeTags(content.replace(/\s/gm, this.encodeText(' ')));
-		if (!arguments.callee.regExpUrl) {
-			arguments.callee.regExpUrl = new RegExp(
-				'^(?:(?:http)|(?:https)|(?:ftp)|(?:irc)):\\/\\/',
-				''
-			);
-		}
-		if(!url || !url.match(arguments.callee.regExpUrl))
+		regExpUrl = new RegExp(
+			'^(?:(?:http)|(?:https)|(?:ftp)|(?:irc)):\\/\\/',
+			''
+		);
+		if(!url || !url.match(regExpUrl))
 			return content;
 		return 	'<a href="'
 				+ url
@@ -2504,18 +2514,17 @@ var ajaxChat = {
 	},
 	
 	replaceBBCodeImage: function(url) {
+		var regExpUrl, maxWidth, maxHeight;
 		if(this.settings['bbCodeImages']) {
-			if (!arguments.callee.regExpUrl) {
-				arguments.callee.regExpUrl = new RegExp(
-					this.regExpMediaUrl,
-					''
-				);
-			}
-			if(!url || !url.match(arguments.callee.regExpUrl))
+			regExpUrl = new RegExp(
+				this.regExpMediaUrl,
+				''
+			);
+			if(!url || !url.match(regExpUrl))
 				return url;
 			url = url.replace(/\s/gm, this.encodeText(' '));
-			var maxWidth = this.dom['chatList'].offsetWidth-50;
-			var maxHeight = this.dom['chatList'].offsetHeight-50;
+			maxWidth = this.dom['chatList'].offsetWidth-50;
+			maxHeight = this.dom['chatList'].offsetHeight-50;
 			return	'<a href="'
 					+url
 					+'" onclick="window.open(this.href); return false;">'
@@ -2556,17 +2565,16 @@ var ajaxChat = {
 	},
 	
 	replaceHyperLinks: function(text) {
+		var regExp;
 		if(!this.settings['hyperLinks']) {
 			return text;
 		}
-		if(!arguments.callee.regExp) {
-			arguments.callee.regExp = new RegExp(
-				'(^|\\s|>)((?:(?:http)|(?:https)|(?:ftp)|(?:irc)):\\/\\/[^\\s<>]+)(<\\/a>)?',
-				'gm'
-			);
-		}
+		regExp = new RegExp(
+			'(^|\\s|>)((?:(?:http)|(?:https)|(?:ftp)|(?:irc)):\\/\\/[^\\s<>]+)(<\\/a>)?',
+			'gm'
+		);
 		return text.replace(
-			arguments.callee.regExp,
+			regExp,
 			// Specifying an anonymous function as second parameter:
 			function(str, p1, p2, p3) {
 				// Do not replace URL's inside URL's:
@@ -2584,13 +2592,12 @@ var ajaxChat = {
 	},
 
 	replaceLineBreaks: function(text) {
-		if (!arguments.callee.regExp) {
-			arguments.callee.regExp = new RegExp('\\n',	'g');
-		}
+		var regExp  = new RegExp('\\n',	'g');
+
 		if(!this.settings['lineBreaks']) {
-			return text.replace(arguments.callee.regExp, ' ');
+			return text.replace(regExp, ' ');
 		} else {
-			return text.replace(arguments.callee.regExp, '<br/>');
+			return text.replace(regExp, '<br/>');
 		}
 	},
 
@@ -2601,7 +2608,7 @@ var ajaxChat = {
 		if(!arguments.callee.regExp) {
 			var regExpStr = '^(.*)(';
 			for(var i=0; i<this.emoticonCodes.length; i++) {
-				if(i!=0)
+				if(i!==0)
 					regExpStr += '|';
 				regExpStr += '(?:' + this.escapeRegExp(this.emoticonCodes[i]) + ')';
 			}
@@ -2709,7 +2716,7 @@ var ajaxChat = {
 	
 	getSelectedStyle: function() {
 		var styleOptions = this.dom['styleSelection'].getElementsByTagName('option');
-		if(this.dom['styleSelection'].selectedIndex == -1) {
+		if(this.dom['styleSelection'].selectedIndex === -1) {
 			return styleOptions[0].value;
 		} else {
 			return styleOptions[this.dom['styleSelection'].selectedIndex].value;
@@ -2717,18 +2724,17 @@ var ajaxChat = {
 	},
 	
 	setActiveStyleSheet: function(title) {
-		var i, a, main;
-		var titleFound = false;
+		var i, a, main, titleFound = false;
 		for(i=0; (a = document.getElementsByTagName('link')[i]); i++) {
-			if(a.getAttribute('rel').indexOf('style') != -1 && a.getAttribute('title')) {
+			if(a.getAttribute('rel').indexOf('style') !== -1 && a.getAttribute('title')) {
 				a.disabled = true;
-				if(a.getAttribute('title') == title) {
+				if(a.getAttribute('title') === title) {
 	                a.disabled = false;
 	                titleFound = true;
 				}
 			}
 		}
-		if(!titleFound && title != null) {
+		if(!titleFound && title !== null) {
 		   this.setActiveStyleSheet(this.getPreferredStyleSheet());
 		}
 	},
@@ -2746,8 +2752,8 @@ var ajaxChat = {
 	getPreferredStyleSheet: function() {
 		var i,a;
 		for(i=0; (a = document.getElementsByTagName('link')[i]); i++) {
-			if(a.getAttribute('rel').indexOf('style') != -1
-				&& a.getAttribute('rel').indexOf('alt') == -1
+			if(a.getAttribute('rel').indexOf('style') !== -1
+				&& a.getAttribute('rel').indexOf('alt') === -1
 				&& a.getAttribute('title')
 				) {
 				return a.getAttribute('title');
@@ -2780,10 +2786,10 @@ var ajaxChat = {
 		var ca = document.cookie.split(';');
 		for(var i=0; i<ca.length; i++) {
 			var c = ca[i];
-			while(c.charAt(0) == ' ') {
+			while(c.charAt(0) === ' ') {
 				c = c.substring(1, c.length);
 			}
-			if(c.indexOf(nameEQ) == 0) {
+			if(c.indexOf(nameEQ) === 0) {
 				return decodeURIComponent(c.substring(nameEQ.length, c.length));
 			}
 		}
@@ -2803,7 +2809,7 @@ var ajaxChat = {
 	},
 	
 	finalize: function() {	
-		if(typeof this.finalizeFunction == 'function') {
+		if(typeof this.finalizeFunction === 'function') {
 			this.finalizeFunction();
 		}
 		this.persistSettings();
@@ -2933,4 +2939,4 @@ var ajaxChat = {
 		return true;
 	}
 
-}
+};
