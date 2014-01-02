@@ -2930,24 +2930,80 @@ var ajaxChat = {
     return true;
   },
 
+  refreshChannelList: function() {
+    $('option', this.dom.channelSelection).remove();
+    options = $(this.dom.channelSelection).prop('options');
+    $.each(ajaxChat.xmpp.channels, function(i, channel) {
+      options[options.length] = new Option(channel[1], channel[0]);
+    });
+  },
+
   xmpp: {
     connection: null,
     jid: null,
     chat: null,
+    config: null,
 
     initialize: function(chat) {
       this.chat = chat;
-      console.log("Initializing XMPPBOSH connection to " + ajaxChatConfig.xmpp.boshURL);
+      this.config = ajaxChatConfig.xmpp;
+      this.initializeConnection(
+        function() {
+          ajaxChat.xmpp.announcePresence();
+          ajaxChat.xmpp.discoverRooms();
+        }
+      );
+    },
+
+    initializeConnection: function(callback) {
+      console.log("Initializing XMPPBOSH connection to " + this.config.boshURL);
       /* TODO: strophe can attach to an existing BOSH session.
         can we use this to somehow unify forum/chat sessions? */
-      this.connection = new Strophe.Connection(ajaxChatConfig.xmpp.boshURL);
-      this.jid = ajaxChatConfig.xmpp.user + '@' + ajaxChatConfig.xmpp.domain;
-      console.log("Connecting as " + this.jid + " with pass [" + ajaxChatConfig.xmpp.pass + "]");
-      this.connection.connect(this.jid, ajaxChatConfig.xmpp.pass, this.eventConnectCallback());
+      this.connection = new Strophe.Connection(this.config.boshURL);
+
+      // DEBUG: print connection stream to console:
+      this.connection.rawInput = function(data) { console.log("RECV " + data) }
+      this.connection.rawOutput = function(data) { console.log("SEND " + data) }
+
+      this.resource = this.createResourceName();
+      this.jid = this.config.user + '@' + this.config.domain; // + '/' + this.resource;
+      console.log("Connecting as " + this.jid + " with pass [" + this.config.pass + "]");
+      this.connection.connect(this.jid, this.config.pass, this.eventConnectCallback(callback));
       console.log("Finished");
     },
 
-    eventConnectCallback: function() {
+    announcePresence: function() {
+      console.log("Announcing presence as " + this.jid);
+      this.connection.send($pres({from:this.jid, to:this.config.domain}));
+    },
+
+    discoverRooms: function() {
+      console.log("Sending query for rooms.");
+      this.connection.sendIQ(
+        $iq({
+          to:ajaxChatConfig.xmpp.muc_service,
+          type:'get'
+        })
+        .c('query', {xmlns:Strophe.NS.DISCO_ITEMS}),
+        function(stanza) {
+          var channels = []
+          $('item', stanza).each(function(s,t) {
+            t = $(t)
+            channels[channels.length] = [t.attr('jid').match(/^[^@]+/)[0], t.attr('name')];
+          });
+          ajaxChat.xmpp.channels = channels;
+          ajaxChat.refreshChannelList();
+        },
+        function() {}
+      );
+    },
+
+    createResourceName: function() {
+      // TODO: Do this properly.
+      return 'strophe-' + hex_sha1(""+Math.random()).substr(0,8);
+    },
+
+    eventConnectCallback: function(callback) {
       var self = this;
       return function(status, errorCondition) {
         self.chat.setStatus(self.readStatus(status))
@@ -2955,6 +3011,9 @@ var ajaxChat = {
         var msg = 'XMPP: ' + statusmsg + ' (' + errorCondition + ')';
         console.log(msg);
         self.chat.addChatBotMessageToChatList('/error ' + msg);
+        if (ajaxChat.requestStatus == 'connected') {
+          callback();
+        }
       }
     },
 
