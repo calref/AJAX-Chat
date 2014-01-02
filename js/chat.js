@@ -85,7 +85,7 @@ var ajaxChat = {
   httpRequest: null,
   retryTimer: null,
   retryTimerDelay: null,
-  requestStatus: 'ok',
+  requestStatus: 'connected',
   DOMbuffering: null,
   DOMbuffer: null,
   DOMbufferRowClass: 'rowOdd',
@@ -265,7 +265,7 @@ var ajaxChat = {
     this.setSelectedStyle();
     this.customInitialize();
     //preload the Alert icon (it can't display if there's no connection unless it's cached!)
-    this.setStatus('retrying');
+    this.setStatus('disconnected');
     if(typeof this.initializeFunction === 'function') {
       this.initializeFunction();
     }
@@ -617,22 +617,20 @@ var ajaxChat = {
   },
 
   setStatus: function(newStatus) {
-    // status options are: ok, retrying, waiting
-    if (this.requestStatus !== 'retrying' || newStatus === 'ok') {
-      this.requestStatus = newStatus;
-    }
+    // status options are: ok, disconnected, connecting
+    this.requestStatus = newStatus;
 
     var statusIcon = document.getElementById('statusIconContainer');
 
     if (statusIcon) {
       switch (this.requestStatus) {
-        case 'ok':
+        case 'connected':
           this.setClass(statusIcon, 'statusContainerOff');
           break;
-        case 'waiting':
+        case 'connecting':
           this.setClass(statusIcon, 'statusContainerOn');
           break;
-        case 'retrying':
+        case 'disconnected':
           this.setClass(statusIcon, 'statusContainerAlert');
           break;
       }
@@ -641,7 +639,7 @@ var ajaxChat = {
 
   forceNewRequest: function() {
     ajaxChat.updateChat(null);
-    ajaxChat.setStatus('retrying');
+    ajaxChat.setStatus('disconnected');
   },
 
   getHttpRequest: function(identifier) {
@@ -667,7 +665,7 @@ var ajaxChat = {
 
   makeRequest: function(url, method, data) {
     var identifier;
-    this.setStatus('waiting');
+    this.setStatus('connecting');
 
     try {
       if(data) {
@@ -697,7 +695,7 @@ var ajaxChat = {
           try {
             if(data) {
               ajaxChat.addChatBotMessageToChatList('/error ConnectionTimeout');
-              ajaxChat.setStatus('retrying');
+              ajaxChat.setStatus('disconnected');
               ajaxChat.updateChatlistView();
             }
           } catch(e) {
@@ -718,7 +716,7 @@ var ajaxChat = {
       clearTimeout(this.timer);
       if(data) {
         this.addChatBotMessageToChatList('/error ConnectionTimeout');
-        ajaxChat.setStatus('retrying');
+        ajaxChat.setStatus('disconnected');
         this.updateChatlistView();
       }
       this.timer = setTimeout(function() { ajaxChat.updateChat(null); }, this.timerRate);
@@ -731,16 +729,16 @@ var ajaxChat = {
       if (this.getHttpRequest(identifier).status === 200) {
         clearTimeout(ajaxChat.retryTimer);
         xmlDoc = this.getHttpRequest(identifier).responseXML;
-        ajaxChat.setStatus('ok');
+        ajaxChat.setStatus('connected');
       } else {
         // Connection status 0 can be ignored.
         if (this.getHttpRequest(identifier).status === 0) {
-          this.setStatus('waiting');
+          this.setStatus('connecting');
           this.updateChatlistView();
           return false;
         } else {
           this.addChatBotMessageToChatList('/error ConnectionStatus '+this.getHttpRequest(identifier).status);
-          this.setStatus('retrying');
+          this.setStatus('disconnected');
           this.updateChatlistView();
           return false;
         }
@@ -2952,7 +2950,8 @@ var ajaxChat = {
     eventConnectCallback: function() {
       var self = this;
       return function(status, errorCondition) {
-        var statusmsg = self.readStatus(status)
+        self.setStatus(self.readStatus(status))
+        var statusmsg = self.readStatusMessage(status)
         var msg = 'XMPP: ' + statusmsg + ' (' + errorCondition + ')';
         console.log(msg);
         self.chat.addChatBotMessageToChatList('/error ' + msg);
@@ -2960,6 +2959,23 @@ var ajaxChat = {
     },
 
     readStatus: function(status) {
+      switch (status) {
+        case Strophe.Status.ERROR:
+        case Strophe.Status.CONNFAIL:
+        case Strophe.Status.AUTHFAIL:
+        case Strophe.Status.DISCONNECTED:
+          return 'disconnected';
+        case Strophe.Status.CONNECTING:
+        case Strophe.Status.AUTHENTICATING:
+        case Strophe.Status.DISCONNECTING:
+          return 'connecting';
+        case Strophe.Status.CONNECTED:
+        case Strophe.Status.ATTACHED:
+          return 'connected';
+      }
+    }
+
+    readStatusMessage: function(status) {
       switch (status) {
         case Strophe.Status.ERROR: return ajaxChatConfig.xmpp.strings.status.ERROR;
         case Strophe.Status.CONNECTING: return ajaxChatConfig.xmpp.strings.status.CONNECTING;
