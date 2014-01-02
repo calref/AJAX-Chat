@@ -90,6 +90,7 @@ var ajaxChat = {
   DOMbuffer: null,
   DOMbufferRowClass: 'rowOdd',
   dronesRioting: null,
+  userLinks: [],
 
   init: function(config, lang, initSettings, initStyle, initialize, initializeFunction, finalizeFunction) {
     console.log('Initializing ajaxChat');
@@ -1543,6 +1544,14 @@ var ajaxChat = {
     }
   },
 
+  render: function(text) {
+    html = this.replaceBBCode(text);
+    html = this.replaceHyperLinks(html);
+    html = this.replacePonicons(html);
+    html = this.replaceEmoticons(html);
+    return html;
+  },
+
   sendMessage: function(text) {
     text = text ? text : this.dom['inputField'].value;
     if(!text) {
@@ -1550,12 +1559,8 @@ var ajaxChat = {
     }
     text = this.parseInputMessage(text);
     if(text) {
-      clearTimeout(this.timer);
-      var message =   'lastID='
-              + this.lastID
-              + '&text='
-              + this.encodeText(text);
-      this.makeRequest(this.ajaxURL,'POST',message);
+      html = this.render(text)
+      this.xmpp.sendMessage(html, text);
     }
     this.dom['inputField'].value = '';
     this.dom['inputField'].focus();
@@ -1781,23 +1786,8 @@ var ajaxChat = {
   },
 
   switchChannel: function(channel) {
-    if(!this.chatStarted) {
-      this.clearChatList();
-      this.channelSwitch = true;
-      this.loginChannelID = null;
-      this.loginChannelName = channel;
-      this.requestTeaserContent();
-      return;
-    }
-    clearTimeout(this.timer);
-    var message =   'lastID='
-            + this.lastID
-            + '&channelName='
-            + this.encodeText(channel);
-    this.makeRequest(this.ajaxURL,'POST',message);
-    if(this.dom['inputField'] && this.settings['autoFocus']) {
-      this.dom['inputField'].focus();
-    }
+    $(ajaxChat.dom.chatList).html('');
+    ajaxChat.xmpp.changeChannel(channel);
   },
 
   logout: function() {
@@ -2806,6 +2796,7 @@ var ajaxChat = {
     this.persistSettings();
     this.persistStyle();
     this.customFinalize();
+    this.xmpp.disconnect();
   },
 
 
@@ -2938,21 +2929,66 @@ var ajaxChat = {
     });
   },
 
+  addUser: function(user) {
+    if (!this.userLinks[user.name]) {
+      this.userLinks[user.name] = $(this.generateUserLink(user));
+      $(this.dom.onlineList).append(this.userLinks[user.name]);
+    }
+  },
+
+  removeUser: function(user) {
+    if (this.userLinks[user.name]) {
+      this.userLinks[user.name].remove();
+      this.userLinks[user.name] = null;
+    }
+  },
+
+  generateUserLink: function(user) {
+    return '<div>' + user.name + '</div>';
+  },
+
+  addMessage: function(user, time, body) {
+    $(this.dom.chatList).append(this.printMessage(user, time, body));
+  },
+
+  printMessage: function(user, time, body) {
+    this.DOMbufferRowClass = this.DOMbufferRowClass === 'rowEven' ? 'rowOdd' : 'rowEven';
+    return '<div class="' + (this.DOMbufferRowClass) + '">' +
+      '<span class="dateTime">' + this.formatDate(this.settings['dateFormat'], time) + '</span> ' +
+      '<span class="user">' + user + '</span>: ' +
+      body +
+      '</div>';
+  },
+
   xmpp: {
     connection: null,
     jid: null,
     chat: null,
     config: null,
+    channels: null,
+    currentChannel: null,
+    currentNick: null,
+    roomJid: null,
+    resource: null,
 
     initialize: function(chat) {
       this.chat = chat;
       this.config = ajaxChatConfig.xmpp;
       this.initializeConnection(
         function() {
-          ajaxChat.xmpp.announcePresence();
+          ajaxChat.xmpp.announce();
           ajaxChat.xmpp.discoverRooms();
         }
       );
+    },
+
+    presence: function(recipient) {
+      if (recipient) return $pres({from:this.jid, to:recipient});
+      else return $pres({from:this.jid});
+    },
+
+    msg : function(msg) {
+      return $msg({from:ajaxChat.xmpp.jid, to:ajaxChat.xmpp.roomJid});
     },
 
     initializeConnection: function(callback) {
@@ -2964,24 +3000,26 @@ var ajaxChat = {
       // DEBUG: print connection stream to console:
       this.connection.rawInput = function(data) { console.log("RECV " + data) }
       this.connection.rawOutput = function(data) { console.log("SEND " + data) }
-
       this.resource = this.createResourceName();
-      this.jid = this.config.user + '@' + this.config.domain; // + '/' + this.resource;
+      this.jid = this.config.user + '@' + this.config.domain + '/' + this.resource;
+      this.currentNick = this.config.user;
+      this.connection.addHandler(this.eventPresenceCallback, null, 'presence');
+      this.connection.addHandler(this.eventMessageCallback, null, 'message');
       console.log("Connecting as " + this.jid + " with pass [" + this.config.pass + "]");
       this.connection.connect(this.jid, this.config.pass, this.eventConnectCallback(callback));
       console.log("Finished");
     },
 
-    announcePresence: function() {
+    announce: function() {
       console.log("Announcing presence as " + this.jid);
-      this.connection.send($pres({from:this.jid, to:this.config.domain}));
+      this.connection.send(this.presence());
     },
 
     discoverRooms: function() {
       console.log("Sending query for rooms.");
       this.connection.sendIQ(
         $iq({
-          to:ajaxChatConfig.xmpp.muc_service,
+          to:this.config.muc_service,
           type:'get'
         })
         .c('query', {xmlns:Strophe.NS.DISCO_ITEMS}),
@@ -2993,6 +3031,10 @@ var ajaxChat = {
           });
           ajaxChat.xmpp.channels = channels;
           ajaxChat.refreshChannelList();
+          room = ajaxChatConfig.xmpp.default_room;
+          console.log("Joining default room " + room);
+          $(ajaxChat.dom.channelSelection).val(room);
+          ajaxChat.switchChannel(room);
         },
         function() {}
       );
@@ -3000,7 +3042,80 @@ var ajaxChat = {
 
     createResourceName: function() {
       // TODO: Do this properly.
-      return 'strophe-' + hex_sha1(""+Math.random()).substr(0,8);
+      return 'strophe/' + hex_sha1(""+Math.random()).substr(0,4);
+    },
+
+    getUserName: function(muc_jid) {
+      console.log('Saw user ' + muc_jid);
+      if (this.roomJid && muc_jid.substr(0,this.roomJid.length+1) == this.roomJid + '/') {
+        return muc_jid.substr(this.roomJid.length + 1);
+      }
+    },
+
+    changeChannel: function(channel) {
+      if (this.currentChannel) {
+        this.leaveChannel(this.roomJid);
+      }
+      this.currentChannel = channel;
+      this.roomJid = channel + '@' + this.config.muc_service;
+      this.joinChannel(this.roomJid);
+    },
+
+    leaveChannel: function(channel) {
+      this.connection.send(this.presence(channel + '/' + this.currentNick)
+        .attrs({type:'unavailable'}));
+    },
+
+    joinChannel: function(channel) {
+      this.connection.send(
+        this.presence(channel + '/' + this.currentNick)
+        .c('x', {xmlns:Strophe.NS.MUC})
+      );
+    },
+
+    sendMessage: function(html, text) {
+      this.connection.send(this.msg().attrs({type:'groupchat'})
+        .c('body', text).up()
+        .c('html', {xmlns:Strophe.NS.XHTML_IM})
+        .c('body', {xmlns:Strophe.NS.XHTML}).cnode($('<p>'+html+'</p>')[0])
+      );
+    },
+
+    eventPresenceCallback: function(stanza) {
+      if (stanza) {
+        var user = ajaxChat.xmpp.getUserName($(stanza).attr('from'));
+        if (user) {
+          if ($(stanza).attr('type') == 'unavailable') {
+            ajaxChat.removeUser({name:user});
+          }
+          else {
+            ajaxChat.addUser({name:user});
+          }
+        }
+      }
+      return true;
+    },
+
+    eventMessageCallback: function(stanza) {
+      if (stanza) {
+        var user = ajaxChat.xmpp.getUserName($(stanza).attr('from'));
+        if (user) {
+          var body = null;
+          var html = $('html body p', stanza).html();
+          if (html) {
+            body = html;
+          } else {
+            body = $($('body', stanza)[0]).text();
+            console.log(body);
+            body = ajaxChat.render(body);
+            console.log(body);
+          }
+          var time = $('delay', stanza).attr('stamp');
+          time = time ? new Date(time) : new Date();
+          ajaxChat.addMessage(user, time, body);
+        }
+      }
+      return true;
     },
 
     eventConnectCallback: function(callback) {
@@ -3046,6 +3161,10 @@ var ajaxChat = {
         case Strophe.Status.DISCONNECTING: return ajaxChatConfig.xmpp.strings.status.DISCONNECTING;
         case Strophe.Status.ATTACHED: return ajaxChatConfig.xmpp.strings.status.ATTACHED;
       }
+    },
+
+    disconnect: function() {
+      this.connection.send(this.presence().attrs({type: 'unavailable'}));
     }
   }
 };
