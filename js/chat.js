@@ -2950,7 +2950,7 @@ var ajaxChat = {
     eventConnectCallback: function() {
       var self = this;
       return function(status, errorCondition) {
-        self.setStatus(self.readStatus(status))
+        self.chat.setStatus(self.readStatus(status))
         var statusmsg = self.readStatusMessage(status)
         var msg = 'XMPP: ' + statusmsg + ' (' + errorCondition + ')';
         console.log(msg);
@@ -2973,7 +2973,7 @@ var ajaxChat = {
         case Strophe.Status.ATTACHED:
           return 'connected';
       }
-    }
+    },
 
     readStatusMessage: function(status) {
       switch (status) {
