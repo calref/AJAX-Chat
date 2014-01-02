@@ -7,6 +7,8 @@ CREATE TABLE ajax_chat_online (
 	channel INT(11) NOT NULL,
 	dateTime DATETIME NOT NULL,
 	ip VARBINARY(16) NOT NULL,
+	isTyping INT(1) NOT NULL,
+	isAway INT(1) NOT NULL,
 	PRIMARY KEY (userID),
 	INDEX (userName)
 ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
