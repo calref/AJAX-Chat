@@ -613,6 +613,26 @@ var ajaxChatConfig = {
 	// Defines the port of the socket server:
 	socketServerPort: 1935,
 	// This ID can be used to distinguish between different chat installations using the same socket server:
-	socketServerChatID: 0
+	socketServerChatID: 0,
 
+  xmpp: {
+    user: 'arancaytar',
+    // This is NOT the server, but the domain portion of the JID.
+    domain: 'eris.ermarian.net',
+    pass: 'testpass',
+    boshURL: 'http://eris.ermarian.net:5280/http-bind/',
+    strings: {
+      status: {
+        'ERROR' : 'An error has occurred',
+        'CONNECTING' : 'The connection is currently being made',
+        'CONNFAIL' : 'The connection attempt failed',
+        'AUTHENTICATING' : 'The connection is authenticating',
+        'AUTHFAIL' : 'The authentication attempt failed',
+        'CONNECTED' : 'The connection has succeeded',
+        'DISCONNECTED' : 'The connection has been terminated',
+        'DISCONNECTING' : 'The connection is currently being terminated',
+        'ATTACHED' : 'The connection has been attached',
+      }
+    }
+  }
 }

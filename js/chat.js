@@ -92,6 +92,7 @@ var ajaxChat = {
   dronesRioting: null,
 	
 	init: function(config, lang, initSettings, initStyle, initialize, initializeFunction, finalizeFunction) {	
+	  console.log('Initializing ajaxChat');
 		this.httpRequest		= {};
 		this.usersList			= [];
 		this.userNamesList		= [];
@@ -268,17 +269,9 @@ var ajaxChat = {
 		if(typeof this.initializeFunction === 'function') {
 			this.initializeFunction();
 		}
-		if(!this.isCookieEnabled()) {
-			this.addChatBotMessageToChatList('/error CookiesRequired');
-		} else {
-			if(this.startChatOnLoad) {
-				this.startChat();
-			} else {
-				this.setStartChatHandler();
-				this.requestTeaserContent();
-			}
-		}
     this.loadSounds();
+
+    this.xmpp.initialize(this);
 	},
 
 	requestTeaserContent: function() {
@@ -2332,7 +2325,7 @@ var ajaxChat = {
 	},
 		
 	replaceCommandError: function(textParts) {
-		var errorMessage = this.lang['error'+textParts[1]];
+		var errorMessage = textParts.slice(1).join(' ');
 		if(!errorMessage) {
 			errorMessage = 'Error: Unknown.';
 		} else if(textParts.length > 2) {
@@ -2937,6 +2930,47 @@ var ajaxChat = {
 	// Return true if message is to be added to the chatList, else false
 	customOnNewMessage: function(dateObject, userID, userName, userRole, messageID, messageText, channelID, ip) {
 		return true;
-	}
+	},
 
+  xmpp: {
+    connection: null,
+    jid: null,
+    chat: null,
+
+    initialize: function(chat) {
+      this.chat = chat;
+      console.log("Initializing XMPPBOSH connection to " + ajaxChatConfig.xmpp.boshURL);
+      /* TODO: strophe can attach to an existing BOSH session.
+        can we use this to somehow unify forum/chat sessions? */
+      this.connection = new Strophe.Connection(ajaxChatConfig.xmpp.boshURL);
+      this.jid = ajaxChatConfig.xmpp.user + '@' + ajaxChatConfig.xmpp.domain;
+      console.log("Connecting as " + this.jid + " with pass [" + ajaxChatConfig.xmpp.pass + "]");
+      this.connection.connect(this.jid, ajaxChatConfig.xmpp.pass, this.eventConnectCallback());
+      console.log("Finished");
+    },
+
+    eventConnectCallback: function() {
+      var self = this;
+      return function(status, errorCondition) {
+        var statusmsg = self.readStatus(status)
+        var msg = 'XMPP: ' + statusmsg + ' (' + errorCondition + ')';
+        console.log(msg);
+        self.chat.addChatBotMessageToChatList('/error ' + msg);
+      }
+    },
+
+    readStatus: function(status) {
+      switch (status) {
+        case Strophe.Status.ERROR: return ajaxChatConfig.xmpp.strings.status.ERROR;
+        case Strophe.Status.CONNECTING: return ajaxChatConfig.xmpp.strings.status.CONNECTING;
+        case Strophe.Status.CONNFAIL: return ajaxChatConfig.xmpp.strings.status.CONNFAIL;
+        case Strophe.Status.AUTHENTICATING: return ajaxChatConfig.xmpp.strings.status.AUTHENTICATING;
+        case Strophe.Status.AUTHFAIL: return ajaxChatConfig.xmpp.strings.status.AUTHFAIL;
+        case Strophe.Status.CONNECTED: return ajaxChatConfig.xmpp.strings.status.CONNECTED;
+        case Strophe.Status.DISCONNECTED: return ajaxChatConfig.xmpp.strings.status.DISCONNECTED;
+        case Strophe.Status.DISCONNECTING: return ajaxChatConfig.xmpp.strings.status.DISCONNECTING;
+        case Strophe.Status.ATTACHED: return ajaxChatConfig.xmpp.strings.status.ATTACHED;
+      }
+    }
+  }
 };
