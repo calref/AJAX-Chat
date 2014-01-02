@@ -27,21 +27,7 @@
     border: 1px solid #B84623;
   }
 
-  /* Status Icon */
-  #content #statusIconContainer {
-    background-image: url('../img/loading-sprite.png');
-  }
-  #content .statusContainerOff {
-    background-position: 0px 0px;
-  }
-  #content .statusContainerOn {
-    background-position: 0px -22px;
-  }
-  #content .statusContainerAlert {
-    background-position: 0px -44px;
-  }
 
-  /* Other Theme Elements */
   #loginContent {
     background-color:#F1F1F1;
     color:#333333;

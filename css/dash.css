@@ -42,15 +42,6 @@
     background: none repeat scroll 0 0 rgba(0, 0, 0, 0.5);
     border-color: #1B1B1F;
 }
-.statusContainerOn {
-    background-image: url("../img/loading.png");
-}
-.statusContainerOff {
-    background-image: url("../img/loading-done.png");
-}
-.statusContainerAlert {
-    background-image: url("../img/loading-trouble.png");
-}
 #content #bbCodeContainer input, #content #logoutButton, #content #submitButton {
     background: none repeat scroll 0 0 rgba(0, 0, 0, 0.5);
     color: #FFFFFF;

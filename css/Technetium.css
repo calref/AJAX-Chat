@@ -15,19 +15,6 @@
     border: 1px solid #0066B9;
   }
 
-  /* Status Icon */
-  #content #statusIconContainer {
-    background-image: url('../img/loading-sprite.png');
-  }
-  #content .statusContainerOff {
-    background-position: 0px 0px;
-  }
-  #content .statusContainerOn {
-    background-position: 0px -22px;
-  }
-  #content .statusContainerAlert {
-    background-position: 0px -44px;
-  }
 
   /* Other Theme Elements */
   #loginContent {
@@ -85,16 +72,7 @@
     box-shadow: 0 5px 8px rgba(10, 10, 10, 0.75) inset;
     color: #E7E7E7;
   }
-  .statusContainerOn {
-    background-image: url('../img/loading.png');
-    box-shadow: 0 5px 8px rgba(10, 10, 10, 0.75) inset;
-  }
-  .statusContainerOff {
-    background-image: url('../img/loading-done.png');
-    box-shadow: 0 5px 8px rgba(10, 10, 10, 0.75) inset;
-  }
-  .statusContainerAlert {
-    background-image: url('../img/loading-trouble.png');
+  #statusIconContainer {
     box-shadow: 0 5px 8px rgba(10, 10, 10, 0.75) inset;
   }
   #content #bbCodeContainer input, #content #submitButton {

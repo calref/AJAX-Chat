@@ -77,15 +77,6 @@
     border-color:#32cd32;
     background: url('../img/theme/omg/darker.png') transparent;
   }
-  .statusContainerOn {
-    background-image: url('../img/loading.png');
-  }
-  .statusContainerOff {
-    background-image: url('../img/loading-done.png');
-  }
-  .statusContainerAlert {
-    background-image: url('../img/loading-trouble.png');
-  }
   #content #bbCodeContainer input, #content #logoutButton, #content #submitButton {
     background: url('../img/theme/omg/darker.png') transparent;
     color:#32cd32;

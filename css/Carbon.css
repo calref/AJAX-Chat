@@ -16,20 +16,6 @@
 
 @media screen,projection,handheld {
 
-  /* Status Icon */
-  #content #statusIconContainer {
-    background-image: url('../img/loading-sprite.png');
-  }
-  #content .statusContainerOff {
-    background-position: 0px 0px;
-  }
-  #content .statusContainerOn {
-    background-position: 0px -22px;
-  }
-  #content .statusContainerAlert {
-    background-position: 0px -44px;
-  }
-
   #loginContent {
     background-color:#000;
     color:#FFFFCC;
