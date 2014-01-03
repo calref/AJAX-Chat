@@ -7,7 +7,7 @@
  */
 
 // Ajax Chat config parameters:
-var ajaxChatConfig = {
+var config = {
 
   // The channelID of the channel to enter on login (the loginChannelName is used if set to null):
   loginChannelID: null,
@@ -619,7 +619,7 @@ var ajaxChatConfig = {
     user: 'arancaytar',
     // This is NOT the server, but the domain portion of the JID.
     domain: 'eris.ermarian.net',
-    pass: 'testpass',
+    pass: 'fellowship origin',
     boshURL: 'http://eris.ermarian.net:5280/http-bind/',
     muc_service: 'conference.ermarian.net',
     default_room: 'lounge',
@@ -636,5 +636,7 @@ var ajaxChatConfig = {
         'ATTACHED' : 'The connection has been attached',
       }
     }
-  }
+  },
+
+  css: ['dash', 'omg', 'Sulfur', 'Mercury', 'Carbon', 'Technetium']
 }

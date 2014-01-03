@@ -91,6 +91,7 @@ var ajaxChat = {
   DOMbufferRowClass: 'rowOdd',
   dronesRioting: null,
   userLinks: [],
+  chatListHeight: null,
 
   init: function(config, lang, initSettings, initStyle, initialize, initializeFunction, finalizeFunction) {
     console.log('Initializing ajaxChat');
@@ -160,10 +161,11 @@ var ajaxChat = {
 
   initDirectories: function() {
     this.dirs = {};
-    this.dirs['statuses']   = 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/';
-    this.dirs['emoticons']   = 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/emoticons/';
-    this.dirs['ponicons']   = 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/img/emoticons/mlp/';
-    this.dirs['sounds']    = 'https://c312441.ssl.cf1.rackcdn.com/ajaxchat/sounds/';
+    this.dirs['resources'] = 'http://localhost/~christoph/strophe/';
+    this.dirs['statuses']   = 'img/';
+    this.dirs['emoticons']   = 'img/emoticons/';
+    this.dirs['ponicons']   = 'img/emoticons/mlp/';
+    this.dirs['sounds']    = 'sounds/';
   },
 
   initSettings: function() {
@@ -265,14 +267,13 @@ var ajaxChat = {
     this.initializeSettings();
     this.setSelectedStyle();
     this.customInitialize();
-    //preload the Alert icon (it can't display if there's no connection unless it's cached!)
-    this.setStatus('disconnected');
     if(typeof this.initializeFunction === 'function') {
       this.initializeFunction();
     }
     this.loadSounds();
-
-    this.xmpp.initialize(this);
+    this.chatListHeight = parseInt($(this.dom.chatList).css('height'));
+    ui.initialize();
+    xmpp.initialize();
   },
 
   requestTeaserContent: function() {
@@ -338,6 +339,7 @@ var ajaxChat = {
         onunload();
       };
     }
+    window.onbeforeunload = window.onunload;
   },
 
   updateDOM: function(id, str, prepend, overwrite) {
@@ -617,27 +619,6 @@ var ajaxChat = {
     }
   },
 
-  setStatus: function(newStatus) {
-    // status options are: ok, disconnected, connecting
-    this.requestStatus = newStatus;
-
-    var statusIcon = document.getElementById('statusIconContainer');
-
-    if (statusIcon) {
-      switch (this.requestStatus) {
-        case 'connected':
-          this.setClass(statusIcon, 'statusContainerOff');
-          break;
-        case 'connecting':
-          this.setClass(statusIcon, 'statusContainerOn');
-          break;
-        case 'disconnected':
-          this.setClass(statusIcon, 'statusContainerAlert');
-          break;
-      }
-    }
-  },
-
   forceNewRequest: function() {
     ajaxChat.updateChat(null);
     ajaxChat.setStatus('disconnected');
@@ -901,68 +882,60 @@ var ajaxChat = {
     }
   },
 
-  removeUserFromOnlineList: function(userID, index) {
+  removeUserFromOnlineList: function(userName, index) {
     this.usersList.splice(index, 1);
     this.userNamesList.splice(index, 1);
     if(this.dom['onlineList']) {
-      this.dom['onlineList'].removeChild(this.getUserNode(userID));
+      this.dom['onlineList'].removeChild(this.getUserNode(userName));
     }
   },
 
-  addUserToOnlineList: function(userID, userName, userRole) {
-    this.usersList.push(userID);
-    this.userNamesList.push(userName);
-    if(this.dom['onlineList']) {
+  addUserToOnlineList: function(userName, userAffiliation, userRole) {
+    this.usersList.push(userName);
+    if(this.dom.onlineList) {
       this.updateDOM(
         'onlineList',
-        this.getUserNodeString(userID, userName, userRole),
-        (this.userID === userID)
+        this.getUserNodeString(userName, userAffiliation, userRole),
+        (xmpp.currentNick === userName)
       );
     }
   },
 
-  getUserNodeString: function(userID, userName, userRole) {
+  getUserNodeString: function(userName, userAffiliation, userRole) {
     var encodedUserName, str;
-    if(this.userNodeString && userID === this.userID) {
-      return this.userNodeString;
-    } else {
-      encodedUserName = this.scriptLinkEncode(userName);
-      str  = '<div id="'
-          + this.getUserDocumentID(userID)
-          + '"><a href="javascript:ajaxChat.toggleUserMenu(\''
-          + this.getUserMenuDocumentID(userID)
-          + '\', \''
-          + encodedUserName
-          + '\', '
-          + userID
-          + ');" class="'
-          + this.getRoleClass(userRole)
-          + '" title="'
-          + this.lang['toggleUserMenu'].replace(/%s/, userName)
-          + '">'
-          + userName
-          + ' <span id="'
-          + this.getUserDocumentID(userID)
-          + '-away" class="away" style="display:none"><img src="'
-          + this.dirs['statuses']
-          + 'away.png" alt="(Away)" /></span>'
-          + '</a>'
-          + '<ul class="userMenu" id="'
-          + this.getUserMenuDocumentID(userID)
-          + '"'
-          + ((userID === this.userID) ?
-            '>'+this.getUserNodeStringItems(encodedUserName, userID, false) :
-            ' style="display:none;">')
-          + '</ul>'
-          +'</div>';
-      if(userID === this.userID) {
-        this.userNodeString = str;
-      }
+    encodedUserName = this.scriptLinkEncode(userName);
+    str  = '<div id="'
+        + this.getUserDocumentID(userName)
+        + '"><a href="javascript:ajaxChat.toggleUserMenu(\''
+        + this.getUserMenuDocumentID(userName)
+        + '\', \''
+        + encodedUserName
+        + '\', '
+        + userName
+        + ');" class="'
+        + this.getRoleClass(userRole, userAffiliation)
+        + '" title="'
+        + this.lang['toggleUserMenu'].replace(/%s/, userName)
+        + '">'
+        + userName
+        + ' <span id="'
+        + this.getUserDocumentID(userName)
+        + '-away" class="away" style="display:none"><img src="'
+        + this.dirs['statuses']
+        + 'away.png" alt="(Away)" /></span>'
+        + '</a>'
+        + '<ul class="userMenu" id="'
+        + this.getUserMenuDocumentID(userName)
+        + '"'
+        + ((userName === xmpp.currentNick) ?
+          '>'+this.getUserNodeStringItems(encodedUserName, false, true, userName) :
+          ' style="display:none;">')
+        + '</ul>'
+        +'</div>';
       return str;
-    }
   },
 
-  toggleUserMenu: function(menuID, userName, userID) {
+  toggleUserMenu: function(menuID, userName) {
     // If the menu is empty, fill it with user node menu items before toggling it.
     var isInline = false;
     if (menuID.indexOf('ium') >= 0 ) {
@@ -984,9 +957,9 @@ var ajaxChat = {
     this.dom['chatList'].scrollTop = this.dom['chatList'].scrollHeight;
   },
 
-  getUserNodeStringItems: function(encodedUserName, userID, isInline) {
+  getUserNodeStringItems: function(encodedUserName, isInline, isMe, userName) {
     var menu;
-    if(encodedUserName !== this.encodedUserName) {
+    if(!isMe) {
       menu   = '<li><a href="javascript:ajaxChat.insertMessageWrapper(\'/msg '
           + encodedUserName
           + ' \');">'
@@ -1072,7 +1045,7 @@ var ajaxChat = {
         }
       }
     }
-    menu += this.getCustomUserMenuItems(encodedUserName, userID);
+    menu += this.getCustomUserMenuItems(encodedUserName, userName);
     return menu;
   },
 
@@ -1545,7 +1518,8 @@ var ajaxChat = {
   },
 
   render: function(text) {
-    html = this.replaceBBCode(text);
+    html = this.replaceLineBreaks(text);
+    html = this.replaceBBCode(html);
     html = this.replaceHyperLinks(html);
     html = this.replacePonicons(html);
     html = this.replaceEmoticons(html);
@@ -1560,7 +1534,7 @@ var ajaxChat = {
     text = this.parseInputMessage(text);
     if(text) {
       html = this.render(text)
-      this.xmpp.sendMessage(html, text);
+      xmpp.sendMessage(html, text);
     }
     this.dom['inputField'].value = '';
     this.dom['inputField'].focus();
@@ -1787,6 +1761,8 @@ var ajaxChat = {
 
   switchChannel: function(channel) {
     $(ajaxChat.dom.chatList).html('');
+    $(ajaxChat.dom.onlineList).html('');
+    this.userLinks = [];
     ajaxChat.xmpp.changeChannel(channel);
   },
 
@@ -2614,7 +2590,7 @@ var ajaxChat = {
       var index = ajaxChat.arraySearch(p2, ajaxChat.emoticonCodes);
       return   ajaxChat.replaceEmoticons(p1)
         +  '<img src="'
-        +  ajaxChat.dirs['emoticons']
+        +  this.dirs.resources + ajaxChat.dirs.emoticons
         +  ajaxChat.emoticonFiles[index]
         +  '" alt="'
         +  p2
@@ -2655,7 +2631,7 @@ var ajaxChat = {
       var index = ajaxChat.arraySearch(p2, ajaxChat.poniconCodes);
       return   ajaxChat.replacePonicons(p1)
         +  '<img src="'
-        +  ajaxChat.dirs['ponicons']
+        +  ajaxChat.dirs.resources + ajaxChat.dirs['ponicons']
         +  ajaxChat.poniconFiles[index]
         +  '" alt="'
         +  p2
@@ -2796,7 +2772,7 @@ var ajaxChat = {
     this.persistSettings();
     this.persistStyle();
     this.customFinalize();
-    this.xmpp.disconnect();
+    xmpp.disconnect();
   },
 
 
@@ -2885,7 +2861,7 @@ var ajaxChat = {
   parseCustomInputCommand: function(text, textParts) {
     switch(textParts[0]) {
       case '/ponicons':
-        return "Ponicons " + ajaxChatConfig["poniconVersion"];
+        return "Ponicons " + config["poniconVersion"];
         break;
       default:
         return text;
@@ -2921,34 +2897,10 @@ var ajaxChat = {
     return true;
   },
 
-  refreshChannelList: function() {
-    $('option', this.dom.channelSelection).remove();
-    options = $(this.dom.channelSelection).prop('options');
-    $.each(ajaxChat.xmpp.channels, function(i, channel) {
-      options[options.length] = new Option(channel[1], channel[0]);
-    });
-  },
-
-  addUser: function(user) {
-    if (!this.userLinks[user.name]) {
-      this.userLinks[user.name] = $(this.generateUserLink(user));
-      $(this.dom.onlineList).append(this.userLinks[user.name]);
-    }
-  },
-
-  removeUser: function(user) {
-    if (this.userLinks[user.name]) {
-      this.userLinks[user.name].remove();
-      this.userLinks[user.name] = null;
-    }
-  },
-
-  generateUserLink: function(user) {
-    return '<div>' + user.name + '</div>';
-  },
-
   addMessage: function(user, time, body) {
     $(this.dom.chatList).append(this.printMessage(user, time, body));
+
+    console.log(">"+this.dom.chatList.scrollTop + ":" + this.dom.chatList.scrollHeight);
   },
 
   printMessage: function(user, time, body) {
@@ -2959,212 +2911,4 @@ var ajaxChat = {
       body +
       '</div>';
   },
-
-  xmpp: {
-    connection: null,
-    jid: null,
-    chat: null,
-    config: null,
-    channels: null,
-    currentChannel: null,
-    currentNick: null,
-    roomJid: null,
-    resource: null,
-
-    initialize: function(chat) {
-      this.chat = chat;
-      this.config = ajaxChatConfig.xmpp;
-      this.initializeConnection(
-        function() {
-          ajaxChat.xmpp.announce();
-          ajaxChat.xmpp.discoverRooms();
-        }
-      );
-    },
-
-    presence: function(recipient) {
-      if (recipient) return $pres({from:this.jid, to:recipient});
-      else return $pres({from:this.jid});
-    },
-
-    msg : function(msg) {
-      return $msg({from:ajaxChat.xmpp.jid, to:ajaxChat.xmpp.roomJid});
-    },
-
-    initializeConnection: function(callback) {
-      console.log("Initializing XMPPBOSH connection to " + this.config.boshURL);
-      /* TODO: strophe can attach to an existing BOSH session.
-        can we use this to somehow unify forum/chat sessions? */
-      this.connection = new Strophe.Connection(this.config.boshURL);
-
-      // DEBUG: print connection stream to console:
-      this.connection.rawInput = function(data) { console.log("RECV " + data) }
-      this.connection.rawOutput = function(data) { console.log("SEND " + data) }
-      this.resource = this.createResourceName();
-      this.jid = this.config.user + '@' + this.config.domain + '/' + this.resource;
-      this.currentNick = this.config.user;
-      this.connection.addHandler(this.eventPresenceCallback, null, 'presence');
-      this.connection.addHandler(this.eventMessageCallback, null, 'message');
-      console.log("Connecting as " + this.jid + " with pass [" + this.config.pass + "]");
-      this.connection.connect(this.jid, this.config.pass, this.eventConnectCallback(callback));
-      console.log("Finished");
-    },
-
-    announce: function() {
-      console.log("Announcing presence as " + this.jid);
-      this.connection.send(this.presence());
-    },
-
-    discoverRooms: function() {
-      console.log("Sending query for rooms.");
-      this.connection.sendIQ(
-        $iq({
-          to:this.config.muc_service,
-          type:'get'
-        })
-        .c('query', {xmlns:Strophe.NS.DISCO_ITEMS}),
-        function(stanza) {
-          var channels = []
-          $('item', stanza).each(function(s,t) {
-            t = $(t)
-            channels[channels.length] = [t.attr('jid').match(/^[^@]+/)[0], t.attr('name')];
-          });
-          ajaxChat.xmpp.channels = channels;
-          ajaxChat.refreshChannelList();
-          room = ajaxChatConfig.xmpp.default_room;
-          console.log("Joining default room " + room);
-          $(ajaxChat.dom.channelSelection).val(room);
-          ajaxChat.switchChannel(room);
-        },
-        function() {}
-      );
-    },
-
-    createResourceName: function() {
-      // TODO: Do this properly.
-      return 'strophe/' + hex_sha1(""+Math.random()).substr(0,4);
-    },
-
-    getUserName: function(muc_jid) {
-      console.log('Saw user ' + muc_jid);
-      if (this.roomJid && muc_jid.substr(0,this.roomJid.length+1) == this.roomJid + '/') {
-        return muc_jid.substr(this.roomJid.length + 1);
-      }
-    },
-
-    changeChannel: function(channel) {
-      if (this.currentChannel) {
-        this.leaveChannel(this.roomJid);
-      }
-      this.currentChannel = channel;
-      this.roomJid = channel + '@' + this.config.muc_service;
-      this.joinChannel(this.roomJid);
-    },
-
-    leaveChannel: function(channel) {
-      this.connection.send(this.presence(channel + '/' + this.currentNick)
-        .attrs({type:'unavailable'}));
-    },
-
-    joinChannel: function(channel) {
-      this.connection.send(
-        this.presence(channel + '/' + this.currentNick)
-        .c('x', {xmlns:Strophe.NS.MUC})
-      );
-    },
-
-    sendMessage: function(html, text) {
-      this.connection.send(this.msg().attrs({type:'groupchat'})
-        .c('body', text).up()
-        .c('html', {xmlns:Strophe.NS.XHTML_IM})
-        .c('body', {xmlns:Strophe.NS.XHTML}).cnode($('<p>'+html+'</p>')[0])
-      );
-    },
-
-    eventPresenceCallback: function(stanza) {
-      if (stanza) {
-        var user = ajaxChat.xmpp.getUserName($(stanza).attr('from'));
-        if (user) {
-          if ($(stanza).attr('type') == 'unavailable') {
-            ajaxChat.removeUser({name:user});
-          }
-          else {
-            ajaxChat.addUser({name:user});
-          }
-        }
-      }
-      return true;
-    },
-
-    eventMessageCallback: function(stanza) {
-      if (stanza) {
-        var user = ajaxChat.xmpp.getUserName($(stanza).attr('from'));
-        if (user) {
-          var body = null;
-          var html = $('html body p', stanza).html();
-          if (html) {
-            body = html;
-          } else {
-            body = $($('body', stanza)[0]).text();
-            console.log(body);
-            body = ajaxChat.render(body);
-            console.log(body);
-          }
-          var time = $('delay', stanza).attr('stamp');
-          time = time ? new Date(time) : new Date();
-          ajaxChat.addMessage(user, time, body);
-        }
-      }
-      return true;
-    },
-
-    eventConnectCallback: function(callback) {
-      var self = this;
-      return function(status, errorCondition) {
-        self.chat.setStatus(self.readStatus(status))
-        var statusmsg = self.readStatusMessage(status)
-        var msg = 'XMPP: ' + statusmsg + ' (' + errorCondition + ')';
-        console.log(msg);
-        self.chat.addChatBotMessageToChatList('/error ' + msg);
-        if (ajaxChat.requestStatus == 'connected') {
-          callback();
-        }
-      }
-    },
-
-    readStatus: function(status) {
-      switch (status) {
-        case Strophe.Status.ERROR:
-        case Strophe.Status.CONNFAIL:
-        case Strophe.Status.AUTHFAIL:
-        case Strophe.Status.DISCONNECTED:
-          return 'disconnected';
-        case Strophe.Status.CONNECTING:
-        case Strophe.Status.AUTHENTICATING:
-        case Strophe.Status.DISCONNECTING:
-          return 'connecting';
-        case Strophe.Status.CONNECTED:
-        case Strophe.Status.ATTACHED:
-          return 'connected';
-      }
-    },
-
-    readStatusMessage: function(status) {
-      switch (status) {
-        case Strophe.Status.ERROR: return ajaxChatConfig.xmpp.strings.status.ERROR;
-        case Strophe.Status.CONNECTING: return ajaxChatConfig.xmpp.strings.status.CONNECTING;
-        case Strophe.Status.CONNFAIL: return ajaxChatConfig.xmpp.strings.status.CONNFAIL;
-        case Strophe.Status.AUTHENTICATING: return ajaxChatConfig.xmpp.strings.status.AUTHENTICATING;
-        case Strophe.Status.AUTHFAIL: return ajaxChatConfig.xmpp.strings.status.AUTHFAIL;
-        case Strophe.Status.CONNECTED: return ajaxChatConfig.xmpp.strings.status.CONNECTED;
-        case Strophe.Status.DISCONNECTED: return ajaxChatConfig.xmpp.strings.status.DISCONNECTED;
-        case Strophe.Status.DISCONNECTING: return ajaxChatConfig.xmpp.strings.status.DISCONNECTING;
-        case Strophe.Status.ATTACHED: return ajaxChatConfig.xmpp.strings.status.ATTACHED;
-      }
-    },
-
-    disconnect: function() {
-      this.connection.send(this.presence().attrs({type: 'unavailable'}));
-    }
-  }
 };

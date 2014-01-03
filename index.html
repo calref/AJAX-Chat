@@ -13,6 +13,8 @@
   <script src='js/jquery.js'></script>
   <script src="js/strophe.js" type="text/javascript" charset="UTF-8"></script>
   <script src="js/chat.js" type="text/javascript" charset="UTF-8"></script>
+  <script src="js/xmpp.js" type="text/javascript" charset="UTF-8"></script>
+  <script src="js/ui.js" type="text/javascript" charset="UTF-8"></script>
   <script src="js/custom.js" type="text/javascript" charset="UTF-8"></script>
   <script src="js/lang/en.js" type="text/javascript" charset="UTF-8"></script>
   <script src="js/config.js" type="text/javascript" charset="UTF-8"></script>
@@ -75,22 +77,22 @@
         document.getElementById('blinkIntervalNumberSetting').value = ajaxChat.getSetting('blinkIntervalNumber');
       }
 
-      ajaxChatConfig.loginChannelID = parseInt('8');
-      ajaxChatConfig.sessionName = 'ajax_chat';
-      ajaxChatConfig.cookieExpiration = parseInt('365');
-      ajaxChatConfig.cookiePath = '/';
-      ajaxChatConfig.cookieDomain = '';
-      ajaxChatConfig.cookieSecure = '';
-      ajaxChatConfig.chatBotName = 'INFO';
-      ajaxChatConfig.chatBotID = '2147483647';
-      ajaxChatConfig.allowUserMessageDelete = parseInt('1');
-      ajaxChatConfig.inactiveTimeout = parseInt('2');
-      ajaxChatConfig.privateChannelDiff = parseInt('500000000');
-      ajaxChatConfig.privateMessageDiff = parseInt('1000000000');
-      ajaxChatConfig.showChannelMessages = parseInt('1');
-      ajaxChatConfig.messageTextMaxLength = parseInt('1040');
+      config.loginChannelID = parseInt('8');
+      config.sessionName = 'ajax_chat';
+      config.cookieExpiration = parseInt('365');
+      config.cookiePath = '/';
+      config.cookieDomain = '';
+      config.cookieSecure = '';
+      config.chatBotName = 'INFO';
+      config.chatBotID = '2147483647';
+      config.allowUserMessageDelete = parseInt('1');
+      config.inactiveTimeout = parseInt('2');
+      config.privateChannelDiff = parseInt('500000000');
+      config.privateMessageDiff = parseInt('1000000000');
+      config.showChannelMessages = parseInt('1');
+      config.messageTextMaxLength = parseInt('1040');
 
-      ajaxChat.init(ajaxChatConfig, ajaxChatLang, true, true, true, initialize);
+      ajaxChat.init(config, ajaxChatLang, true, true, true, initialize);
       var easter_egg = new Konami(function() { ajaxChat.konami(); });
     // ]]>
   </script>
@@ -100,9 +102,9 @@
   <div id="content">
     <div id="headlineContainer">
       <label for="channelSelection">Channel:</label>
-      <select id="channelSelection" onchange="ajaxChat.switchChannel(this.options[this.selectedIndex].value);"></select>
+      <select id="channelSelection" onchange="xmpp.changeRoom(this.options[this.selectedIndex].value);"></select>
       <label for="styleSelection">Style:</label>
-      <select id="styleSelection" onchange="ajaxChat.setActiveStyleSheet(ajaxChat.getSelectedStyle());"><option value="omg">omg</option><option value="dash">dash</option><option value="Sulfur">Sulfur</option><option value="Mercury">Mercury</option><option value="Carbon" selected="selected">Carbon</option><option value="Technetium">Technetium</option></select>
+      <select id="styleSelection" onchange="ui.setStyle(this.options[this.selectedIndex].value);"><option value="omg">omg</option><option value="dash">dash</option><option value="Sulfur">Sulfur</option><option value="Mercury">Mercury</option><option value="Carbon" selected="selected">Carbon</option><option value="Technetium">Technetium</option></select>
       </div>
     <div id="statusIconContainer" class="statusContainerOn"></div>
     <!--[if lt IE 7]>
